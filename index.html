@@ -2,102 +2,331 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <link rel="manifest" href="manifest.json">
-
   <title>Image to Prompt Generator Ai</title>
   <style>
     :root {
-      --bg1:#e6f0fa; --bg2:#ffffff; --ink:#333; --ink2:#34495e;
-      --border:#dfe6e9; --brand:#3498db; --brandDark:#2980b9;
-      --ok:#27ae60; --okDark:#219653; --muted:#7f8c8d; --card:#fff;
+      --bg1: #e6f0fa;
+      --bg2: #ffffff;
+      --ink: #333;
+      --ink2: #34495e;
+      --border: #dfe6e9;
+      --brand: #3498db;
+      --brandDark: #2980b9;
+      --ok: #27ae60;
+      --okDark: #219653;
+      --muted: #7f8c8d;
+      --card: #fff;
     }
-    * { box-sizing: border-box; }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
     body {
-      font-family: 'Segoe UI', Arial, sans-serif;
-      max-width: 1200px; margin: 0 auto; padding: 20px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+      margin: 0;
+      padding: 16px;
       background: linear-gradient(to bottom, var(--bg1), var(--bg2));
       color: var(--ink);
+      line-height: 1.5;
     }
-    h1 { text-align: center; color: #2c3e50; margin-bottom: 18px; font-size: 2.1rem; }
-    .subtitle { text-align:center; color: var(--muted); margin: 0 0 24px; font-size:.98rem; }
+
     .container {
-      background: var(--card); border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      background: var(--card);
+      border-radius: 16px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      padding: 18px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 1.8rem;
+      text-align: center;
+      color: #2c3e50;
+      margin: 0 0 12px;
+      line-height: 1.3;
+    }
+
+    .subtitle {
+      text-align: center;
+      color: var(--muted);
+      margin: 0 0 20px;
+      font-size: 0.92rem;
+      padding: 0 8px;
+    }
+
+    .settings {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    @media (min-width: 768px) {
+      .settings {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+    }
+
+    label {
+      font-weight: 600;
+      display: block;
+      margin-bottom: 8px;
+      color: var(--ink2);
+      font-size: 0.95rem;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-size: 1rem;
+      background: #fff;
+      transition: border-color 0.2s;
+    }
+
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--brand);
+      box-shadow: 0 0 0 3px rgba(52,152,219,0.15);
+    }
+
+    textarea {
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    .file-upload {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    @media (min-width: 600px) {
+      .file-upload {
+        flex-direction: row;
+        align-items: center;
+      }
+      #imageInput {
+        flex: 1;
+      }
+    }
+
+    button {
+      padding: 14px 20px;
+      background: var(--brand);
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 1.05rem;
+      font-weight: 600;
+      transition: background 0.2s, transform 0.1s;
+      min-height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    button:hover {
+      background: var(--brandDark);
+    }
+
+    button:active {
+      transform: scale(0.98);
+    }
+
+    #saveApiKey {
+      background: #6c757d;
+      margin-top: 8px;
+      font-size: 1rem;
+      font-weight: normal;
+    }
+
+    #saveApiKey:hover {
+      background: #5a6268;
+    }
+
+    #loading {
+      display: none;
+      text-align: center;
+      color: var(--ok);
+      font-size: 1.1rem;
+      margin: 16px 0;
+      font-weight: 500;
+    }
+
+    .spinner {
+      border: 3px solid rgba(0,0,0,0.1);
+      border-top: 3px solid var(--brand);
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: inline-block;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    #previewContainer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      max-height: 280px;
+      overflow-y: auto;
+      margin: 16px 0;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: #fafafa;
+    }
+
+    .preview {
+      max-width: 100%;
+      height: auto;
+      max-height: 120px;
+      object-fit: cover;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+
+    .hint {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin: 6px 0 0;
+    }
+
+    #result {
+      background: #f9f9f9;
+      border: 1px solid var(--border);
+      padding: 16px;
+      border-radius: 12px;
+      margin-top: 16px;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    h3.section {
+      margin: 18px 0 10px;
+      font-size: 1.25rem;
+      color: var(--ink2);
+    }
+
+    .prompt-item {
+      margin-bottom: 14px;
+      background: white;
+      padding: 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @media (min-width: 600px) {
+      .prompt-item {
+        flex-direction: row;
+        align-items: flex-start;
+      }
+    }
+
+    .prompt-text {
+      flex: 1;
+      white-space: pre-wrap;
+      font-size: 0.95rem;
+      line-height: 1.5;
+    }
+
+    .small {
+      font-size: 0.85rem;
+      color: var(--muted);
+    }
+
+    .prompt-item .copy-btn {
+      background: var(--ok);
+      padding: 10px 16px;
+      border-radius: 8px;
+      min-width: 80px;
+      font-size: 0.95rem;
+      font-weight: 600;
+    }
+
+    .prompt-item .copy-btn:hover {
+      background: var(--okDark);
+    }
+
+    .action-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 20px;
+    }
+
+    @media (min-width: 600px) {
+      .action-buttons {
+        flex-direction: row;
+        justify-content: center;
+      }
+    }
+
+    #status {
+      text-align: center;
+      color: var(--muted);
+      font-style: italic;
+      margin-top: 12px;
+      font-size: 0.95rem;
+      min-height: 1.5em;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: white;
+      color: #555;
+      font-size: 0.8rem;
+    }
+
+    .muted-box {
+      background: white;
+      border: 1px dashed var(--border);
+      padding: 12px;
+      border-radius: 10px;
+      color: #666;
+      font-size: 0.9rem;
+      margin: 16px 0;
+    }
+
+    /* Auth section */
+    #content {
+      display: none;
+      text-align: center;
       padding: 20px;
     }
-    .settings {
-      display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-      gap: 14px; margin-bottom: 14px;
+
+    #logout {
+      margin-top: 12px;
     }
-    label { font-weight: 600; display: block; margin-bottom: 8px; color: var(--ink2); }
-    input, select, textarea {
-      width: 100%; padding: 10px; border: 1px solid var(--border);
-      border-radius: 8px; font-size: 1rem; transition: border-color .2s, box-shadow .2s;
-      background: #fff;
-    }
-    input:focus, select:focus, textarea:focus {
-      outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(52,152,219,.15);
-    }
-    textarea { height: 120px; resize: vertical; }
-    .file-upload { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
-    #imageInput { flex-grow: 1; }
-    button {
-      padding: 12px 16px; background: var(--brand); color: #fff; border: none;
-      border-radius: 8px; cursor: pointer; font-size: 1rem; transition: background .2s, transform .04s;
-    }
-    button:hover { background: var(--brandDark); }
-    button:active { transform: translateY(1px); }
-    #saveApiKey { background: #6c757d; margin-top: 8px; }
-    #saveApiKey:hover { background: #5a6268; }
-    #loading { display: none; text-align: center; color: var(--ok); font-size: 1.05rem; margin: 12px 0; }
-    .spinner {
-      border: 4px solid rgba(0,0,0,.1); border-top: 4px solid var(--brand);
-      border-radius: 50%; width: 22px; height: 22px; animation: spin 1s linear infinite;
-      display: inline-block; margin-left: 10px; vertical-align: middle;
-    }
-    @keyframes spin { 0%{transform: rotate(0)} 100%{transform: rotate(360deg)} }
-    #previewContainer {
-      display: flex; flex-wrap: wrap; gap: 12px; max-height: 320px; overflow-y: auto;
-      margin: 14px 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background:#fafafa;
-    }
-    .preview { max-width: 180px; border-radius: 8px; border: 1px solid var(--border); transition: transform .2s; }
-    .preview:hover { transform: scale(1.04); }
-    .hint {
-      font-size: .9rem; color: var(--muted); margin: 8px 0 0;
-    }
-    #result {
-      background: #f9f9f9; border: 1px solid var(--border); padding: 16px;
-      border-radius: 10px; margin-top: 12px; max-height: 520px; overflow-y: auto;
-    }
-    h3.section { margin: 16px 0 8px; }
-    .prompt-item {
-      margin-bottom: 12px; background: #fff; padding: 12px; border-radius: 8px;
-      border: 1px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,.04);
-      display:flex; align-items:flex-start; gap:10px;
-    }
-    .prompt-text { flex:1; white-space: pre-wrap; }
-    .small { font-size: .9rem; color: var(--muted); }
-    .prompt-item .copy-btn {
-      background: var(--ok); padding: 8px 12px; border-radius: 6px; flex-shrink:0;
-    }
-    .prompt-item .copy-btn:hover { background: var(--okDark); }
-    .action-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
-    #status { text-align: center; color: var(--muted); font-style: italic; margin-top: 8px; }
-    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
-    .badge {
-      display:inline-block; padding:4px 8px; border:1px solid var(--border); border-radius:999px;
-      background:#fff; color:#555; font-size:.8rem;
-    }
-    .muted-box { background:#fff; border:1px dashed var(--border); padding:10px; border-radius:8px; color:#666; }
   </style>
 </head>
 <body>
-   <div id="content" style="display:none">
+  <div id="content">
     <h1>Welcome Boss 👑</h1>
     <p>Kamu berhasil login.</p>
     <button id="logout">Logout</button>
   </div>
+
   <script>
     const API_VALIDATE = "/.netlify/functions/validate";
 
@@ -133,6 +362,7 @@
 
     checkAuth();
   </script>
+
   <div class="container">
     <h1>Batch Image Prompt Generator</h1>
     <p class="subtitle">Optimized for stock-safe diversity (composition • color/tone • style • scenario)</p>
@@ -179,7 +409,7 @@
         <div class="hint">Semakin tinggi, semakin beda komposisi/style/context.</div>
       </div>
 
-      <div style="grid-column: span 2;">
+      <div>
         <label for="apiKeys">Gemini API Keys (one per line):</label>
         <textarea id="apiKeys" placeholder="AIza... (satu per baris)"></textarea>
         <button id="saveApiKey">Save API Keys</button>
@@ -195,7 +425,7 @@
     <div id="loading">Processing... <span class="spinner"></span></div>
     <div id="previewContainer"></div>
 
-    <div class="muted-box small">
+    <div class="muted-box">
       Tips kurasi anti-similar: pilih 2–4 hasil paling beda (komposisi / warna / style / scenario). Hindari minor edits doang.
     </div>
 
@@ -209,12 +439,10 @@
   </div>
 
   <script>
-    // === Config you control ===
     const cloudName = 'dwgfox722';
     const uploadPreset = 'free_upload';
     const imgbbKey = '6fc0fd628ee4e20d8ada76d6e155e26d';
 
-    // === DOM ===
     const el = (id) => document.getElementById(id);
     const runBtn = el('runBtn');
     const loading = el('loading');
@@ -224,7 +452,6 @@
     const copyAllBtn = el('copyAllBtn');
     const downloadBtn = el('downloadBtn');
 
-    // === Helpers ===
     const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
     function platformTextOf(platform) {
@@ -253,7 +480,7 @@
 - Explore clearly distinct aura colors (neon blue, aurora green, warm gold).
 - Switch style family (realistic ↔ stylized ↔ low-poly) while preserving recognizability.
 - Scenario shift is allowed but subtle (e.g., minimal platform, hint of UI frame), still product-usable.`;
-      } else { // high
+      } else {
         return `
 - Bold composition reimagining: macro close-up, ultra wide, dramatic perspective, or aerial angle.
 - Strong color/tone transformation (neon, metallic, aurora ring, gradient spectrum) with deliberate contrast control.
@@ -421,7 +648,7 @@ Style focus: ${styleTxt}.
 
       const keys = Object.keys(promptsObj);
       const out = {};
-      for (let i=0; i<Math.min(keys.length, numPrompts); i++) {
+      for (let i = 0; i < Math.min(keys.length, numPrompts); i++) {
         out[`prompt${i+1}`] = String(promptsObj[keys[i]]).trim();
       }
       return out;
@@ -447,7 +674,7 @@ Style focus: ${styleTxt}.
         btn.onclick = () => {
           navigator.clipboard.writeText(v);
           btn.textContent = 'Copied!';
-          setTimeout(()=> btn.textContent = 'Copy', 1600);
+          setTimeout(() => btn.textContent = 'Copy', 1600);
         };
 
         wrap.appendChild(txt);
@@ -476,12 +703,12 @@ Style focus: ${styleTxt}.
       if (!files.length) return alert('Select at least one image.');
 
       const numPrompts = parseInt(el('numPrompts').value);
-      if (!(numPrompts >=1 && numPrompts <=10)) return alert('Prompts per image must be between 1 and 10.');
+      if (!(numPrompts >= 1 && numPrompts <= 10)) return alert('Prompts per image must be between 1 and 10.');
 
       const styleFocus = el('styleFocus').value;
       const platform = el('platform').value;
       const variation = el('variation').value;
-      const apiKeys = el('apiKeys').value.trim().split('\n').map(s=>s.trim()).filter(Boolean);
+      const apiKeys = el('apiKeys').value.trim().split('\n').map(s => s.trim()).filter(Boolean);
       if (!apiKeys.length) return alert('Enter at least one API key.');
 
       loading.style.display = 'block';
@@ -505,7 +732,7 @@ Style focus: ${styleTxt}.
       let apiIdx = 0;
 
       try {
-        for (let i=0; i<files.length; i++) {
+        for (let i = 0; i < files.length; i++) {
           const file = files[i];
           statusEl.textContent = `Uploading ${i+1}/${files.length}: ${file.name}`;
           try {
@@ -521,8 +748,6 @@ Style focus: ${styleTxt}.
           }
 
           let success = false, prompts;
-          let triesWithThisFile = 0;
-
           while (!success && apiIdx < apiKeys.length) {
             const key = apiKeys[apiIdx];
             statusEl.innerHTML = `Generating ${i+1}/${files.length}: <span class="badge">API key #${apiIdx+1}</span> <span class="small">(${file.name})</span>`;
@@ -533,7 +758,6 @@ Style focus: ${styleTxt}.
               const msg = String(err.message || err);
               if (/429|rate limit/i.test(msg)) {
                 apiIdx++;
-                triesWithThisFile++;
                 if (apiIdx >= apiKeys.length) throw new Error('All API keys are currently rate-limited.');
                 await sleep(600);
               } else {
@@ -550,26 +774,19 @@ Style focus: ${styleTxt}.
         }
 
         statusEl.textContent = 'Processing complete! Curate your best & most distinct prompts.';
-        copyAllBtn.style.display = 'inline-block';
-        downloadBtn.style.display = 'inline-block';
+        copyAllBtn.style.display = 'block';
+        downloadBtn.style.display = 'block';
 
-        // ✅ EDITED: Copy All Prompts — murni nilai prompt saja
+        // ✅ MURNI PROMPT SAJA — SATU BARIS PER PROMPT
         copyAllBtn.onclick = () => {
-          const txt = Object.values(allPrompts).flatMap(obj =>
-            Object.values(obj)
-          ).join('\n');
-
+          const txt = Object.values(allPrompts).flatMap(obj => Object.values(obj)).join('\n');
           navigator.clipboard.writeText(txt);
           copyAllBtn.textContent = 'Copied All!';
           setTimeout(() => copyAllBtn.textContent = 'Copy All Prompts', 1600);
         };
 
-        // ✅ EDITED: Download TXT — murni nilai prompt saja, satu per baris
         downloadBtn.onclick = () => {
-          const txt = Object.values(allPrompts).flatMap(obj =>
-            Object.values(obj)
-          ).join('\n');
-
+          const txt = Object.values(allPrompts).flatMap(obj => Object.values(obj)).join('\n');
           const blob = new Blob([txt], { type: 'text/plain' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
