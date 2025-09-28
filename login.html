@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
   <meta charset="utf-8" />
-  <title>Login — My Site</title>
+  <title>Login — Image to Prompt Generator Ai</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -21,9 +21,7 @@
       width: 320px;
       text-align: center;
     }
-    h2 {
-      margin-bottom: 20px;
-    }
+    h2 { margin-bottom: 20px; }
     .input-wrap {
       position: relative;
       margin-bottom: 20px;
@@ -31,11 +29,11 @@
     }
     .input-wrap input {
       width: 100%;
-      padding: 10px 40px 10px 12px; /* tambah padding kanan biar ada ruang buat icon */
+      padding: 10px 40px 10px 12px;
       font-size: 16px;
       border: 1px solid #ccc;
       border-radius: 6px;
-      box-sizing: border-box; /* biar ukuran tetap pas */
+      box-sizing: border-box;
     }
     .toggle-eye {
       position: absolute;
@@ -56,9 +54,7 @@
       border-radius: 6px;
       cursor: pointer;
     }
-    button:hover {
-      background: #2980b9;
-    }
+    button:hover { background: #2980b9; }
     #msg {
       margin-top: 10px;
       color: red;
@@ -82,7 +78,10 @@
   <script>
     const toggleEye = document.getElementById("toggleEye");
     const input = document.getElementById("code");
+    const form = document.getElementById("loginForm");
+    const msg = document.getElementById("msg");
 
+    // 👁️/🙈 toggle
     toggleEye.addEventListener("click", () => {
       if (input.type === "password") {
         input.type = "text";
@@ -90,6 +89,31 @@
       } else {
         input.type = "password";
         toggleEye.textContent = "👁️";
+      }
+    });
+
+    // Submit form → panggil verify.js
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.textContent = "";
+
+      const code = input.value.trim();
+      try {
+        const res = await fetch("/.netlify/functions/verify", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+
+        if (res.ok && data.ok) {
+          localStorage.setItem("auth_token", data.token);
+          window.location.href = "index.html";
+        } else {
+          msg.textContent = "Kode salah!";
+        }
+      } catch (err) {
+        msg.textContent = "Terjadi error koneksi.";
       }
     });
   </script>
