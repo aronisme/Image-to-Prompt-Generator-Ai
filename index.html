@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<link rel="manifest" href="manifest.json">
+  <link rel="manifest" href="manifest.json">
 
   <title>Image to Prompt Generator Ai</title>
   <style>
@@ -121,7 +121,6 @@
           location.href = "login.html";
         }
       } catch (err) {
-        // Jika gagal network, lebih aman redirect ke login
         localStorage.removeItem("auth_token");
         location.href = "login.html";
       }
@@ -277,22 +276,18 @@
     }
 
     function ensureJson(text) {
-      // Strip possible code fences and language hints
       let t = text.trim()
         .replace(/^```(?:json)?/i, '')
         .replace(/```$/i, '')
         .trim();
 
-      // Try direct JSON first
       try { return JSON.parse(t); } catch {}
 
-      // Fallback: find first {...} block
       const m = t.match(/\{[\s\S]*\}/);
       if (m) {
         try { return JSON.parse(m[0]); } catch {}
       }
 
-      // Fallback: try to coerce "prompt1: ..." lines into JSON
       const lines = t.split('\n').map(s => s.trim()).filter(Boolean);
       const obj = {};
       let idx = 1;
@@ -325,7 +320,6 @@
     async function uploadImgBB(file) {
       const formData = new FormData();
       formData.append('image', file);
-      // optional: auto delete 1 jam (3600 detik), bisa hapus kalau tidak mau expired
       formData.append('expiration', 3600);
 
       const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(imgbbKey)}`, {
@@ -391,7 +385,7 @@ Style focus: ${styleTxt}.
       const base64Image = await fileToBase64(file);
       const prompt = buildPrompt({ numPrompts, styleFocus, platform, variation });
 
-const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${encodeURIComponent(key)}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${encodeURIComponent(key)}`;
 
       const body = {
         contents: [{
@@ -425,13 +419,11 @@ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-
       if (!raw) throw new Error('Empty response from model.');
       const promptsObj = ensureJson(raw);
 
-      // Ensure exactly N prompts; if more, trim; if less, keep what's there
       const keys = Object.keys(promptsObj);
       const out = {};
       for (let i=0; i<Math.min(keys.length, numPrompts); i++) {
         out[`prompt${i+1}`] = String(promptsObj[keys[i]]).trim();
       }
-      // If model returned fewer, we still return what we got.
       return out;
     }
 
@@ -492,7 +484,6 @@ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-
       const apiKeys = el('apiKeys').value.trim().split('\n').map(s=>s.trim()).filter(Boolean);
       if (!apiKeys.length) return alert('Enter at least one API key.');
 
-      // Reset UI
       loading.style.display = 'block';
       previewContainer.innerHTML = '';
       resultDiv.innerHTML = '';
@@ -500,10 +491,8 @@ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-
       copyAllBtn.style.display = 'none';
       downloadBtn.style.display = 'none';
 
-      // Save settings
       storeSettings({ numPrompts, styleFocus, platform, variation });
 
-      // Preview images
       Array.from(files).forEach(file => {
         const img = document.createElement('img');
         img.src = URL.createObjectURL(file);
@@ -512,7 +501,6 @@ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-
         previewContainer.appendChild(img);
       });
 
-      // Upload + Generate
       const allPrompts = {};
       let apiIdx = 0;
 
@@ -521,19 +509,17 @@ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-
           const file = files[i];
           statusEl.textContent = `Uploading ${i+1}/${files.length}: ${file.name}`;
           try {
-            await uploadImgBB(file); // coba upload ke ImgBB dulu
+            await uploadImgBB(file);
             statusEl.textContent = `Uploaded to ImgBB: ${file.name}`;
           } catch (e) {
             try {
-              await uploadCloudinary(file); // fallback kalau ImgBB error
+              await uploadCloudinary(file);
               statusEl.textContent = `Uploaded to Cloudinary: ${file.name}`;
             } catch (err) {
               console.warn('Both ImgBB and Cloudinary failed', err);
-              // biarkan jalan terus, karena upload bukan wajib untuk Gemini
             }
           }
 
-          // Call Gemini with key rotation + 429 retry
           let success = false, prompts;
           let triesWithThisFile = 0;
 
@@ -549,9 +535,9 @@ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-
                 apiIdx++;
                 triesWithThisFile++;
                 if (apiIdx >= apiKeys.length) throw new Error('All API keys are currently rate-limited.');
-                await sleep(600); // brief backoff before next key
+                await sleep(600);
               } else {
-                throw err; // other errors: stop
+                throw err;
               }
             }
           }
@@ -560,31 +546,36 @@ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-
 
           allPrompts[file.name] = prompts;
           renderPrompts(file.name, prompts);
-          await sleep(120); // tiny pacing between files
+          await sleep(120);
         }
 
         statusEl.textContent = 'Processing complete! Curate your best & most distinct prompts.';
         copyAllBtn.style.display = 'inline-block';
         downloadBtn.style.display = 'inline-block';
 
+        // ✅ EDITED: Copy All Prompts — murni nilai prompt saja
         copyAllBtn.onclick = () => {
           const txt = Object.values(allPrompts).flatMap(obj =>
-            Object.entries(obj).map(([k,v]) => `${k}: ${v}`)
+            Object.values(obj)
           ).join('\n');
+
           navigator.clipboard.writeText(txt);
           copyAllBtn.textContent = 'Copied All!';
-          setTimeout(()=> copyAllBtn.textContent = 'Copy All Prompts', 1600);
+          setTimeout(() => copyAllBtn.textContent = 'Copy All Prompts', 1600);
         };
 
+        // ✅ EDITED: Download TXT — murni nilai prompt saja, satu per baris
         downloadBtn.onclick = () => {
-          const txt = Object.entries(allPrompts).map(([fname,obj]) => {
-            const lines = Object.entries(obj).map(([k,v]) => `${k}: ${v}`).join('\n');
-            return `# ${fname}\n${lines}`;
-          }).join('\n\n');
+          const txt = Object.values(allPrompts).flatMap(obj =>
+            Object.values(obj)
+          ).join('\n');
+
           const blob = new Blob([txt], { type: 'text/plain' });
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
-          a.href = url; a.download = 'prompts.txt'; a.click();
+          a.href = url;
+          a.download = 'prompts.txt';
+          a.click();
           URL.revokeObjectURL(url);
         };
 
@@ -596,7 +587,6 @@ const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-
       }
     }
 
-    // === Init ===
     window.onload = restoreSettings;
     el('saveApiKey').onclick = () => {
       const raw = el('apiKeys').value.trim();
