@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>Login — My Site</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: #f0f2f5;
+      margin: 0;
+    }
+    .card {
+      background: #fff;
+      padding: 30px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+      width: 320px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    .input-wrap {
+      position: relative;
+      margin-bottom: 20px;
+      width: 100%;
+    }
+    .input-wrap input {
+      width: 100%;
+      padding: 10px 40px 10px 12px; /* tambah padding kanan biar ada ruang buat icon */
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      box-sizing: border-box; /* biar ukuran tetap pas */
+    }
+    .toggle-eye {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+      font-size: 18px;
+      color: #666;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      background: #3498db;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    #msg {
+      margin-top: 10px;
+      color: red;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Masuk</h2>
+    <form id="loginForm">
+      <div class="input-wrap">
+        <input id="code" type="password" placeholder="Kode rahasia" required />
+        <span id="toggleEye" class="toggle-eye">👁️</span>
+      </div>
+      <button type="submit">Masuk</button>
+    </form>
+    <p id="msg"></p>
+  </div>
+
+  <script>
+    const toggleEye = document.getElementById("toggleEye");
+    const input = document.getElementById("code");
+
+    toggleEye.addEventListener("click", () => {
+      if (input.type === "password") {
+        input.type = "text";
+        toggleEye.textContent = "🙈";
+      } else {
+        input.type = "password";
+        toggleEye.textContent = "👁️";
+      }
+    });
+  </script>
+</body>
+</html>

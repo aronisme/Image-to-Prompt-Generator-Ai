@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<link rel="manifest" href="manifest.json">
+
+  <title>Image to Prompt Generator Ai</title>
+  <style>
+    :root {
+      --bg1:#e6f0fa; --bg2:#ffffff; --ink:#333; --ink2:#34495e;
+      --border:#dfe6e9; --brand:#3498db; --brandDark:#2980b9;
+      --ok:#27ae60; --okDark:#219653; --muted:#7f8c8d; --card:#fff;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      max-width: 1200px; margin: 0 auto; padding: 20px;
+      background: linear-gradient(to bottom, var(--bg1), var(--bg2));
+      color: var(--ink);
+    }
+    h1 { text-align: center; color: #2c3e50; margin-bottom: 18px; font-size: 2.1rem; }
+    .subtitle { text-align:center; color: var(--muted); margin: 0 0 24px; font-size:.98rem; }
+    .container {
+      background: var(--card); border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,.08);
+      padding: 20px;
+    }
+    .settings {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 14px; margin-bottom: 14px;
+    }
+    label { font-weight: 600; display: block; margin-bottom: 8px; color: var(--ink2); }
+    input, select, textarea {
+      width: 100%; padding: 10px; border: 1px solid var(--border);
+      border-radius: 8px; font-size: 1rem; transition: border-color .2s, box-shadow .2s;
+      background: #fff;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px rgba(52,152,219,.15);
+    }
+    textarea { height: 120px; resize: vertical; }
+    .file-upload { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+    #imageInput { flex-grow: 1; }
+    button {
+      padding: 12px 16px; background: var(--brand); color: #fff; border: none;
+      border-radius: 8px; cursor: pointer; font-size: 1rem; transition: background .2s, transform .04s;
+    }
+    button:hover { background: var(--brandDark); }
+    button:active { transform: translateY(1px); }
+    #saveApiKey { background: #6c757d; margin-top: 8px; }
+    #saveApiKey:hover { background: #5a6268; }
+    #loading { display: none; text-align: center; color: var(--ok); font-size: 1.05rem; margin: 12px 0; }
+    .spinner {
+      border: 4px solid rgba(0,0,0,.1); border-top: 4px solid var(--brand);
+      border-radius: 50%; width: 22px; height: 22px; animation: spin 1s linear infinite;
+      display: inline-block; margin-left: 10px; vertical-align: middle;
+    }
+    @keyframes spin { 0%{transform: rotate(0)} 100%{transform: rotate(360deg)} }
+    #previewContainer {
+      display: flex; flex-wrap: wrap; gap: 12px; max-height: 320px; overflow-y: auto;
+      margin: 14px 0; padding: 10px; border: 1px solid var(--border); border-radius: 8px; background:#fafafa;
+    }
+    .preview { max-width: 180px; border-radius: 8px; border: 1px solid var(--border); transition: transform .2s; }
+    .preview:hover { transform: scale(1.04); }
+    .hint {
+      font-size: .9rem; color: var(--muted); margin: 8px 0 0;
+    }
+    #result {
+      background: #f9f9f9; border: 1px solid var(--border); padding: 16px;
+      border-radius: 10px; margin-top: 12px; max-height: 520px; overflow-y: auto;
+    }
+    h3.section { margin: 16px 0 8px; }
+    .prompt-item {
+      margin-bottom: 12px; background: #fff; padding: 12px; border-radius: 8px;
+      border: 1px solid var(--border); box-shadow: 0 2px 6px rgba(0,0,0,.04);
+      display:flex; align-items:flex-start; gap:10px;
+    }
+    .prompt-text { flex:1; white-space: pre-wrap; }
+    .small { font-size: .9rem; color: var(--muted); }
+    .prompt-item .copy-btn {
+      background: var(--ok); padding: 8px 12px; border-radius: 6px; flex-shrink:0;
+    }
+    .prompt-item .copy-btn:hover { background: var(--okDark); }
+    .action-buttons { display: flex; gap: 10px; justify-content: center; margin-top: 14px; }
+    #status { text-align: center; color: var(--muted); font-style: italic; margin-top: 8px; }
+    .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+    .badge {
+      display:inline-block; padding:4px 8px; border:1px solid var(--border); border-radius:999px;
+      background:#fff; color:#555; font-size:.8rem;
+    }
+    .muted-box { background:#fff; border:1px dashed var(--border); padding:10px; border-radius:8px; color:#666; }
+  </style>
+</head>
+<body>
+   <div id="content" style="display:none">
+    <h1>Welcome Boss 👑</h1>
+    <p>Kamu berhasil login.</p>
+    <button id="logout">Logout</button>
+  </div>
+  <script>
+    const API_VALIDATE = "/.netlify/functions/validate";
+
+    async function checkAuth() {
+      const token = localStorage.getItem("auth_token");
+      if (!token) {
+        location.href = "login.html";
+        return;
+      }
+      try {
+        const res = await fetch(API_VALIDATE, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token })
+        });
+        const j = await res.json();
+        if (res.ok && j.ok) {
+          document.getElementById("content").style.display = "block";
+        } else {
+          localStorage.removeItem("auth_token");
+          location.href = "login.html";
+        }
+      } catch (err) {
+        // Jika gagal network, lebih aman redirect ke login
+        localStorage.removeItem("auth_token");
+        location.href = "login.html";
+      }
+    }
+
+    document.getElementById("logout").addEventListener("click", () => {
+      localStorage.removeItem("auth_token");
+      location.href = "login.html";
+    });
+
+    checkAuth();
+  </script>
+  <div class="container">
+    <h1>Batch Image Prompt Generator</h1>
+    <p class="subtitle">Optimized for stock-safe diversity (composition • color/tone • style • scenario)</p>
+
+    <div class="settings">
+      <div>
+        <label for="numPrompts">Prompts per Image:</label>
+        <input type="number" id="numPrompts" min="1" max="10" value="3" />
+        <div class="hint">Rekomendasi: 2–4 biar terkurasi.</div>
+      </div>
+
+      <div>
+        <label for="styleFocus">Style Focus:</label>
+        <select id="styleFocus">
+          <option value="auto">Auto (follow image)</option>
+          <option value="realistic">Realistic</option>
+          <option value="abstract">Abstract</option>
+          <option value="cartoon">Cartoon</option>
+          <option value="minimalist">Minimalist</option>
+          <option value="low-poly">Low-poly / Polygonal</option>
+          <option value="hologram">Hologram / Futuristic</option>
+          <option value="flat-icon">Flat Icon</option>
+          <option value="3d-render">3D Render</option>
+        </select>
+      </div>
+
+      <div>
+        <label for="platform">Target Platform:</label>
+        <select id="platform">
+          <option value="adobe_stock">Adobe Stock</option>
+          <option value="shutterstock">Shutterstock</option>
+          <option value="general">General</option>
+        </select>
+        <div class="hint">Aktifkan anti-similarity guidance otomatis.</div>
+      </div>
+
+      <div>
+        <label for="variation">Variation Level:</label>
+        <select id="variation">
+          <option value="low">Low (slight)</option>
+          <option value="medium" selected>Medium (balanced)</option>
+          <option value="high">High (reimagined)</option>
+        </select>
+        <div class="hint">Semakin tinggi, semakin beda komposisi/style/context.</div>
+      </div>
+
+      <div style="grid-column: span 2;">
+        <label for="apiKeys">Gemini API Keys (one per line):</label>
+        <textarea id="apiKeys" placeholder="AIza... (satu per baris)"></textarea>
+        <button id="saveApiKey">Save API Keys</button>
+        <div class="hint">Mendukung rotasi key & retry 429.</div>
+      </div>
+    </div>
+
+    <div class="file-upload">
+      <input type="file" id="imageInput" accept="image/*" multiple />
+      <button id="runBtn">Upload & Generate</button>
+    </div>
+
+    <div id="loading">Processing... <span class="spinner"></span></div>
+    <div id="previewContainer"></div>
+
+    <div class="muted-box small">
+      Tips kurasi anti-similar: pilih 2–4 hasil paling beda (komposisi / warna / style / scenario). Hindari minor edits doang.
+    </div>
+
+    <div id="result"></div>
+    <div id="status"></div>
+
+    <div class="action-buttons">
+      <button id="copyAllBtn" style="display:none;">Copy All Prompts</button>
+      <button id="downloadBtn" style="display:none;">Download TXT</button>
+    </div>
+  </div>
+
+  <script>
+    // === Config you control ===
+    const cloudName = 'dwgfox722';
+    const uploadPreset = 'free_upload';
+    const imgbbKey = '6fc0fd628ee4e20d8ada76d6e155e26d';
+
+    // === DOM ===
+    const el = (id) => document.getElementById(id);
+    const runBtn = el('runBtn');
+    const loading = el('loading');
+    const statusEl = el('status');
+    const previewContainer = el('previewContainer');
+    const resultDiv = el('result');
+    const copyAllBtn = el('copyAllBtn');
+    const downloadBtn = el('downloadBtn');
+
+    // === Helpers ===
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+    function platformTextOf(platform) {
+      if (platform === 'general') return 'general use';
+      if (platform === 'adobe_stock') return 'Adobe Stock (follow distinct content and anti-similarity guidelines)';
+      if (platform === 'shutterstock') return 'Shutterstock (diversity and search relevance)';
+      return 'general use';
+    }
+
+    function styleTextOf(styleFocus) {
+      return styleFocus === 'auto'
+        ? 'based on the image style'
+        : `in ${styleFocus} style`;
+    }
+
+    function variationRuleOf(variation) {
+      if (variation === 'low') {
+        return `
+- Slight composition shift: tiny zoom in/out or minor camera tilt; keep subject framing similar.
+- Subtle color/tone shift for aura or lighting (e.g., blue → turquoise or soft gold); keep background treatment similar.
+- Maintain same scenario/placement (isolated subject); keep style consistent (e.g., realistic → realistic).
+- Avoid strong contextual changes; focus on nuanced mood/lighting tweaks.`;
+      } else if (variation === 'medium') {
+        return `
+- Moderate composition change: rotate subject, different crop (top-down, 3/4 side), noticeable zoom difference.
+- Explore clearly distinct aura colors (neon blue, aurora green, warm gold).
+- Switch style family (realistic ↔ stylized ↔ low-poly) while preserving recognizability.
+- Scenario shift is allowed but subtle (e.g., minimal platform, hint of UI frame), still product-usable.`;
+      } else { // high
+        return `
+- Bold composition reimagining: macro close-up, ultra wide, dramatic perspective, or aerial angle.
+- Strong color/tone transformation (neon, metallic, aurora ring, gradient spectrum) with deliberate contrast control.
+- Style reimagination (hologram, flat icon, 3D render, polygonal abstraction) emphasizing a new visual language.
+- Scenario recontextualization: held in a human hand, inside a futuristic screen, integrated into an infographic, or in a cosmic/urban scene — still retaining the core concept.`;
+      }
+    }
+
+    function antiSimilarityRules(platform) {
+      const base = [
+        "Do NOT replicate the image exactly — avoid copying exact object positions, identical colors, or minute details.",
+        "Keep the main idea/theme while ensuring each prompt feels distinct.",
+        "Vary at least one dimension substantially per prompt: composition, color/tone, style/expressive language, or scenario/placement.",
+        "Prefer commercially neutral, brand-free outputs suitable for licensing; avoid logos, text overlays, or trademarks."
+      ];
+      if (platform === 'adobe_stock') {
+        base.push("Be selective and curate prompts that are mutually distinct to avoid 'Similar content' rejections.");
+      }
+      return base.map(x => `- ${x}`).join('\n');
+    }
+
+    function ensureJson(text) {
+      // Strip possible code fences and language hints
+      let t = text.trim()
+        .replace(/^```(?:json)?/i, '')
+        .replace(/```$/i, '')
+        .trim();
+
+      // Try direct JSON first
+      try { return JSON.parse(t); } catch {}
+
+      // Fallback: find first {...} block
+      const m = t.match(/\{[\s\S]*\}/);
+      if (m) {
+        try { return JSON.parse(m[0]); } catch {}
+      }
+
+      // Fallback: try to coerce "prompt1: ..." lines into JSON
+      const lines = t.split('\n').map(s => s.trim()).filter(Boolean);
+      const obj = {};
+      let idx = 1;
+      for (const line of lines) {
+        const kv = line.match(/^(prompt\d+)\s*:\s*(.+)$/i);
+        if (kv) {
+          obj[kv[1]] = kv[2].replace(/^"|"$/g, '');
+        } else {
+          obj[`prompt${idx++}`] = line.replace(/^"|"$/g, '');
+        }
+      }
+      if (Object.keys(obj).length) return obj;
+
+      throw new Error('Unable to parse JSON from model response.');
+    }
+
+    async function fileToBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = () => {
+          try {
+            resolve(String(reader.result).split(',')[1]);
+          } catch (e) { reject(e); }
+        };
+        reader.onerror = reject;
+      });
+    }
+
+    async function uploadImgBB(file) {
+      const formData = new FormData();
+      formData.append('image', file);
+      // optional: auto delete 1 jam (3600 detik), bisa hapus kalau tidak mau expired
+      formData.append('expiration', 3600);
+
+      const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(imgbbKey)}`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (!res.ok) throw new Error(`ImgBB upload failed (${res.status})`);
+      return res.json();
+    }
+
+    async function uploadCloudinary(file) {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: formData });
+      if (!res.ok) throw new Error(`Upload failed (${res.status})`);
+      return res.json();
+    }
+
+    function buildPrompt({ numPrompts, styleFocus, platform, variation }) {
+      const styleTxt = styleTextOf(styleFocus);
+      const platformTxt = platformTextOf(platform);
+      const varRule = variationRuleOf(variation);
+      const anti = antiSimilarityRules(platform);
+
+      return `
+Analyze the uploaded image and create exactly ${numPrompts} unique prompts for an AI image generator.
+
+Goals:
+- Preserve only the core concept/subject from the image.
+${anti}
+
+Variation Level: ${variation.toUpperCase()}
+${varRule}
+
+Composition controls (use relevant ones):
+- Close-up vs macro vs medium vs wide/aerial
+- Angle: frontal, 3/4, top-down, low-angle, isometric
+- Framing: centered vs off-center, negative space usage
+
+Color/Tone controls:
+- Aura hues: neon blue, warm gold, aurora green, gradient rings, metallic glow
+- Lighting: soft diffused, high contrast rim light, volumetric glow
+
+Style/Expression controls:
+- Realistic, stylized, low-poly/polygonal, flat icon, hologram/futuristic UI, 3D render
+
+Scenario/Placement controls:
+- Isolated transparent background, on floating pedestal, in a human hand, inside futuristic screen HUD, part of an infographic
+
+Constraints:
+- Make prompts suitable for ${platformTxt}.
+- Avoid brand names, logos, or text overlays.
+- Respond strictly in JSON format: { "prompt1": "text", "prompt2": "text", ... }.
+- Each prompt must be one line, concise, and fully descriptive.
+
+Style focus: ${styleTxt}.
+`;
+    }
+
+    async function callGemini({ key, file, numPrompts, styleFocus, platform, variation }) {
+      const base64Image = await fileToBase64(file);
+      const prompt = buildPrompt({ numPrompts, styleFocus, platform, variation });
+
+const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${encodeURIComponent(key)}`;
+
+      const body = {
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inlineData: { mimeType: file.type, data: base64Image } }
+          ]
+        }],
+        safetySettings: [
+          { category: "HARM_CATEGORY_DANGEROUS_CONTENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HARASSMENT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_SEXUALLY_EXPLICIT", threshold: "BLOCK_NONE" },
+          { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" }
+        ]
+      };
+
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+
+      if (!res.ok) {
+        const t = await res.text().catch(()=> '');
+        const msg = `Gemini API error ${res.status}${t ? `: ${t.slice(0,200)}` : ''}`;
+        throw new Error(msg);
+      }
+
+      const data = await res.json();
+      const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      if (!raw) throw new Error('Empty response from model.');
+      const promptsObj = ensureJson(raw);
+
+      // Ensure exactly N prompts; if more, trim; if less, keep what's there
+      const keys = Object.keys(promptsObj);
+      const out = {};
+      for (let i=0; i<Math.min(keys.length, numPrompts); i++) {
+        out[`prompt${i+1}`] = String(promptsObj[keys[i]]).trim();
+      }
+      // If model returned fewer, we still return what we got.
+      return out;
+    }
+
+    function renderPrompts(filename, prompts) {
+      const header = document.createElement('h3');
+      header.className = 'section';
+      header.textContent = `Prompts for ${filename}`;
+      resultDiv.appendChild(header);
+
+      Object.entries(prompts).forEach(([k, v]) => {
+        const wrap = document.createElement('div');
+        wrap.className = 'prompt-item';
+
+        const txt = document.createElement('div');
+        txt.className = 'prompt-text';
+        txt.textContent = `${k}: ${v}`;
+
+        const btn = document.createElement('button');
+        btn.className = 'copy-btn';
+        btn.textContent = 'Copy';
+        btn.onclick = () => {
+          navigator.clipboard.writeText(v);
+          btn.textContent = 'Copied!';
+          setTimeout(()=> btn.textContent = 'Copy', 1600);
+        };
+
+        wrap.appendChild(txt);
+        wrap.appendChild(btn);
+        resultDiv.appendChild(wrap);
+      });
+    }
+
+    function restoreSettings() {
+      if (localStorage.getItem('apiKeys')) el('apiKeys').value = localStorage.getItem('apiKeys');
+      if (localStorage.getItem('numPrompts')) el('numPrompts').value = localStorage.getItem('numPrompts');
+      if (localStorage.getItem('styleFocus')) el('styleFocus').value = localStorage.getItem('styleFocus');
+      if (localStorage.getItem('platform')) el('platform').value = localStorage.getItem('platform');
+      if (localStorage.getItem('variation')) el('variation').value = localStorage.getItem('variation');
+    }
+
+    function storeSettings({ numPrompts, styleFocus, platform, variation }) {
+      localStorage.setItem('numPrompts', String(numPrompts));
+      localStorage.setItem('styleFocus', styleFocus);
+      localStorage.setItem('platform', platform);
+      localStorage.setItem('variation', variation);
+    }
+
+    async function uploadAndGenerate() {
+      const files = el('imageInput').files;
+      if (!files.length) return alert('Select at least one image.');
+
+      const numPrompts = parseInt(el('numPrompts').value);
+      if (!(numPrompts >=1 && numPrompts <=10)) return alert('Prompts per image must be between 1 and 10.');
+
+      const styleFocus = el('styleFocus').value;
+      const platform = el('platform').value;
+      const variation = el('variation').value;
+      const apiKeys = el('apiKeys').value.trim().split('\n').map(s=>s.trim()).filter(Boolean);
+      if (!apiKeys.length) return alert('Enter at least one API key.');
+
+      // Reset UI
+      loading.style.display = 'block';
+      previewContainer.innerHTML = '';
+      resultDiv.innerHTML = '';
+      statusEl.textContent = '';
+      copyAllBtn.style.display = 'none';
+      downloadBtn.style.display = 'none';
+
+      // Save settings
+      storeSettings({ numPrompts, styleFocus, platform, variation });
+
+      // Preview images
+      Array.from(files).forEach(file => {
+        const img = document.createElement('img');
+        img.src = URL.createObjectURL(file);
+        img.className = 'preview';
+        img.title = file.name;
+        previewContainer.appendChild(img);
+      });
+
+      // Upload + Generate
+      const allPrompts = {};
+      let apiIdx = 0;
+
+      try {
+        for (let i=0; i<files.length; i++) {
+          const file = files[i];
+          statusEl.textContent = `Uploading ${i+1}/${files.length}: ${file.name}`;
+          try {
+            await uploadImgBB(file); // coba upload ke ImgBB dulu
+            statusEl.textContent = `Uploaded to ImgBB: ${file.name}`;
+          } catch (e) {
+            try {
+              await uploadCloudinary(file); // fallback kalau ImgBB error
+              statusEl.textContent = `Uploaded to Cloudinary: ${file.name}`;
+            } catch (err) {
+              console.warn('Both ImgBB and Cloudinary failed', err);
+              // biarkan jalan terus, karena upload bukan wajib untuk Gemini
+            }
+          }
+
+          // Call Gemini with key rotation + 429 retry
+          let success = false, prompts;
+          let triesWithThisFile = 0;
+
+          while (!success && apiIdx < apiKeys.length) {
+            const key = apiKeys[apiIdx];
+            statusEl.innerHTML = `Generating ${i+1}/${files.length}: <span class="badge">API key #${apiIdx+1}</span> <span class="small">(${file.name})</span>`;
+            try {
+              prompts = await callGemini({ key, file, numPrompts, styleFocus, platform, variation });
+              success = true;
+            } catch (err) {
+              const msg = String(err.message || err);
+              if (/429|rate limit/i.test(msg)) {
+                apiIdx++;
+                triesWithThisFile++;
+                if (apiIdx >= apiKeys.length) throw new Error('All API keys are currently rate-limited.');
+                await sleep(600); // brief backoff before next key
+              } else {
+                throw err; // other errors: stop
+              }
+            }
+          }
+
+          if (!success) throw new Error('Failed to generate prompts.');
+
+          allPrompts[file.name] = prompts;
+          renderPrompts(file.name, prompts);
+          await sleep(120); // tiny pacing between files
+        }
+
+        statusEl.textContent = 'Processing complete! Curate your best & most distinct prompts.';
+        copyAllBtn.style.display = 'inline-block';
+        downloadBtn.style.display = 'inline-block';
+
+        copyAllBtn.onclick = () => {
+          const txt = Object.values(allPrompts).flatMap(obj =>
+            Object.entries(obj).map(([k,v]) => `${k}: ${v}`)
+          ).join('\n');
+          navigator.clipboard.writeText(txt);
+          copyAllBtn.textContent = 'Copied All!';
+          setTimeout(()=> copyAllBtn.textContent = 'Copy All Prompts', 1600);
+        };
+
+        downloadBtn.onclick = () => {
+          const txt = Object.entries(allPrompts).map(([fname,obj]) => {
+            const lines = Object.entries(obj).map(([k,v]) => `${k}: ${v}`).join('\n');
+            return `# ${fname}\n${lines}`;
+          }).join('\n\n');
+          const blob = new Blob([txt], { type: 'text/plain' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url; a.download = 'prompts.txt'; a.click();
+          URL.revokeObjectURL(url);
+        };
+
+      } catch (error) {
+        alert('Error: ' + (error?.message || error));
+        statusEl.textContent = 'Error occurred during processing.';
+      } finally {
+        loading.style.display = 'none';
+      }
+    }
+
+    // === Init ===
+    window.onload = restoreSettings;
+    el('saveApiKey').onclick = () => {
+      const raw = el('apiKeys').value.trim();
+      localStorage.setItem('apiKeys', raw);
+      alert('API keys saved!');
+    };
+    runBtn.onclick = uploadAndGenerate;
+  </script>
+</body>
+</html>
