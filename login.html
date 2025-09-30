@@ -67,7 +67,7 @@
     <h2>Masuk</h2>
     <form id="loginForm">
       <div class="input-wrap">
-        <input id="code" type="password" placeholder="Kode rahasia" required />
+        <input id="code" type="password" placeholder="Kode rahasia" required autocomplete="off" />
         <span id="toggleEye" class="toggle-eye">👁️</span>
       </div>
       <button type="submit">Masuk</button>
@@ -98,6 +98,11 @@
       msg.textContent = "";
 
       const code = input.value.trim();
+      if (!code) {
+        msg.textContent = "Masukkan kode terlebih dahulu.";
+        return;
+      }
+
       try {
         const res = await fetch("/.netlify/functions/verify", {
           method: "POST",
@@ -111,9 +116,17 @@
           window.location.href = "index.html";
         } else {
           msg.textContent = "Kode salah!";
+          input.select(); // fokus & select untuk memudahkan input ulang
         }
       } catch (err) {
         msg.textContent = "Terjadi error koneksi.";
+      }
+    });
+
+    // 🔑 Tambahkan dukungan tekan Enter di input
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        form.requestSubmit(); // Trigger form submit secara standar
       }
     });
   </script>

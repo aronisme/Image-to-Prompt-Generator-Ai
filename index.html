@@ -377,15 +377,45 @@
       <div>
         <label for="styleFocus">Style Focus:</label>
         <select id="styleFocus">
-          <option value="auto">Auto (follow image)</option>
-          <option value="realistic">Realistic</option>
-          <option value="abstract">Abstract</option>
-          <option value="cartoon">Cartoon</option>
-          <option value="minimalist">Minimalist</option>
-          <option value="low-poly">Low-poly / Polygonal</option>
-          <option value="hologram">Hologram / Futuristic</option>
-          <option value="flat-icon">Flat Icon</option>
-          <option value="3d-render">3D Render</option>
+          <!-- Foto Styles -->
+          <optgroup label="📸 Foto Styles">
+            <option value="random">Random (AI)</option>
+            <option value="copy-space">Copy Space / Negative Space</option>
+            <option value="close-up">Close-up</option>
+            <option value="flat-lay">Flat Lay</option>
+            <option value="macro-texture">Macro / Texture</option>
+            <option value="lifestyle-candid">Lifestyle Candid / Natural</option>
+            <option value="bokeh">Bokeh / Shallow Depth</option>
+            <option value="panoramic">Panoramic / Wide Shot</option>
+            <option value="hdr">HDR (High Dynamic Range)</option>
+            <option value="aerial-drone">Aerial / Drone View</option>
+            <option value="motion-blur">Motion Blur / Action Shot</option>
+            <option value="long-exposure">Long Exposure</option>
+            <option value="cinematic">Cinematic / Film Look</option>
+          </optgroup>
+
+          <!-- Ilustrasi Styles -->
+          <optgroup label="🎨 Ilustrasi Styles">
+            <option value="vector-minimalism">Vector Minimalism</option>
+            <option value="infographic">Infographic Style Illustration</option>
+            <option value="line-art">Line Art / Outline Illustration</option>
+            <option value="flat-design">Flat Design Illustration</option>
+            <option value="isometric">Isometric Illustration</option>
+            <option value="typography">Typography / Text-based Design</option>
+            <option value="pattern">Pattern / Seamless Background</option>
+            <option value="watercolor">Watercolor Illustration</option>
+            <option value="cartoon">Cartoon / Mascot Style</option>
+          </optgroup>
+
+          <!-- Foto / Ilustrasi (Mix) -->
+          <optgroup label="🖼️ Foto / Ilustrasi (Mix)">
+            <option value="isolated">Minimalist Isolated on White</option>
+            <option value="conceptual">Conceptual / Abstract</option>
+            <option value="silhouette">Silhouette</option>
+            <option value="minimalist-clean">Minimalist / Clean Composition</option>
+            <option value="vintage">Vintage / Retro Style</option>
+            <option value="surreal">Surreal / Fantasy</option>
+          </optgroup>
         </select>
       </div>
 
@@ -462,9 +492,38 @@
     }
 
     function styleTextOf(styleFocus) {
-      return styleFocus === 'auto'
-        ? 'based on the image style'
-        : `in ${styleFocus} style`;
+      if (styleFocus === 'random') return 'randomized AI style';
+      if (styleFocus === 'copy-space') return 'photo with copy space / negative space';
+      if (styleFocus === 'close-up') return 'close-up photography';
+      if (styleFocus === 'flat-lay') return 'flat lay composition';
+      if (styleFocus === 'macro-texture') return 'macro photography emphasizing texture';
+      if (styleFocus === 'lifestyle-candid') return 'natural lifestyle candid photo';
+      if (styleFocus === 'bokeh') return 'shallow depth of field / bokeh style';
+      if (styleFocus === 'panoramic') return 'panoramic wide shot';
+      if (styleFocus === 'hdr') return 'high dynamic range photo';
+      if (styleFocus === 'aerial-drone') return 'aerial drone view';
+      if (styleFocus === 'motion-blur') return 'motion blur / action shot';
+      if (styleFocus === 'long-exposure') return 'long exposure photo';
+      if (styleFocus === 'cinematic') return 'cinematic film look';
+
+      if (styleFocus === 'vector-minimalism') return 'vector minimalism illustration';
+      if (styleFocus === 'infographic') return 'infographic style illustration';
+      if (styleFocus === 'line-art') return 'line art / outline illustration';
+      if (styleFocus === 'flat-design') return 'flat design illustration';
+      if (styleFocus === 'isometric') return 'isometric illustration';
+      if (styleFocus === 'typography') return 'typography / text-based design';
+      if (styleFocus === 'pattern') return 'pattern / seamless background illustration';
+      if (styleFocus === 'watercolor') return 'watercolor illustration';
+      if (styleFocus === 'cartoon') return 'cartoon mascot style illustration';
+
+      if (styleFocus === 'isolated') return 'minimalist isolated on solid white background';
+      if (styleFocus === 'conceptual') return 'conceptual abstract art';
+      if (styleFocus === 'silhouette') return 'silhouette composition';
+      if (styleFocus === 'minimalist-clean') return 'minimalist clean composition';
+      if (styleFocus === 'vintage') return 'vintage retro style';
+      if (styleFocus === 'surreal') return 'surreal fantasy style';
+
+      return `in ${styleFocus} style`;
     }
 
     function variationRuleOf(variation) {
@@ -603,6 +662,7 @@ Constraints:
 - Avoid brand names, logos, or text overlays.
 - Respond strictly in JSON format: { "prompt1": "text", "prompt2": "text", ... }.
 - Each prompt must be one line, concise, and fully descriptive.
+- Always use a solid white background if isolation is needed. Never use transparent background.
 
 Style focus: ${styleTxt}.
 `;
