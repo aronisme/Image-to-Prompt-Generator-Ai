@@ -527,26 +527,27 @@
     }
 
     function variationRuleOf(variation) {
-      if (variation === 'low') {
-        return `
+    if (variation === 'low') {
+      return `
 - Slight composition shift: tiny zoom in/out or minor camera tilt; keep subject framing similar.
 - Subtle color/tone shift for aura or lighting (e.g., blue → turquoise or soft gold); keep background treatment similar.
 - Maintain same scenario/placement (isolated subject); keep style consistent (e.g., realistic → realistic).
 - Avoid strong contextual changes; focus on nuanced mood/lighting tweaks.`;
-      } else if (variation === 'medium') {
-        return `
+    } else if (variation === 'medium') {
+      return `
 - Moderate composition change: rotate subject, different crop (top-down, 3/4 side), noticeable zoom difference.
 - Explore clearly distinct aura colors.
 - Switch style family (realistic ↔ stylized ↔ low-poly) while preserving recognizability.
 - Scenario shift is allowed but subtle (e.g., minimal platform, hint of UI frame), still product-usable.`;
-      } else {
-        return `
+    } else {
+      return `
 - Bold composition reimagining: macro close-up, ultra wide, dramatic perspective, or aerial angle.
 - Strong color/tone transformation with deliberate contrast control.
-- Style reimagination (hologram, flat icon, 3D render, polygonal abstraction) emphasizing a new visual language.
-- Scenario recontextualization: held in a human hand, inside a futuristic screen, integrated into an infographic, or in a cosmic/urban scene — still retaining the core concept.`;
-      }
+- Style reimagination: natural, realistic, elegant palettes emphasizing clarity and visual harmony.
+- Scenario recontextualization: held in a human hand, integrated into an infographic, or placed in a natural/urban scene — still retaining the core concept.`;
     }
+  }
+
 
     function antiSimilarityRules(platform) {
       const base = [
@@ -626,13 +627,14 @@
       return res.json();
     }
 
-    function buildPrompt({ numPrompts, styleFocus, platform, variation }) {
-      const styleTxt = styleTextOf(styleFocus);
-      const platformTxt = platformTextOf(platform);
-      const varRule = variationRuleOf(variation);
-      const anti = antiSimilarityRules(platform);
 
-      return `
+  function buildPrompt({ numPrompts, styleFocus, platform, variation }) {
+    const styleTxt = styleTextOf(styleFocus);
+    const platformTxt = platformTextOf(platform);
+    const varRule = variationRuleOf(variation);
+    const anti = antiSimilarityRules(platform);
+
+    return `
 Analyze the uploaded image and create exactly ${numPrompts} unique prompts for an AI image generator.
 
 Goals:
@@ -649,24 +651,26 @@ Composition controls (use relevant ones):
 
 Color/Tone controls:
 - Aura hues.
-- Lighting: soft diffused, high contrast rim light, volumetric glow
+- Lighting: natural daylight, soft diffused, warm or cool tones
 
 Style/Expression controls:
-- Realistic, stylized, low-poly/polygonal, flat icon, hologram/futuristic UI, 3D render
+- Realistic, stylized, low-poly/polygonal, flat icon, 3D render
 
 Scenario/Placement controls:
-- Isolated transparent background, on floating pedestal, in a human hand, inside futuristic screen HUD, part of an infographic
+- Isolated transparent background, on floating pedestal, in a human hand, inside a screen interface, part of an infographic
 
 Constraints:
 - Make prompts suitable for ${platformTxt}.
 - Avoid brand names, logos, or text overlays.
+- Avoid neon lighting, glowing effects, or hologram style.
 - Respond strictly in JSON format: { "prompt1": "text", "prompt2": "text", ... }.
 - Each prompt must be one line, concise, and fully descriptive.
 - Always use a solid white background if isolation is needed. Never use transparent background.
 
 Style focus: ${styleTxt}.
 `;
-    }
+  }
+
 
     async function callGemini({ key, file, numPrompts, styleFocus, platform, variation }) {
       const base64Image = await fileToBase64(file);
