@@ -81,7 +81,7 @@
     const form = document.getElementById("loginForm");
     const msg = document.getElementById("msg");
 
-    // 👁️/🙈 toggle
+    // 👁️/🙈 toggle password visibility
     toggleEye.addEventListener("click", () => {
       if (input.type === "password") {
         input.type = "text";
@@ -92,7 +92,7 @@
       }
     });
 
-    // Submit form → panggil verify.js
+    // Handle form submit (Enter otomatis trigger submit)
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
       msg.textContent = "";
@@ -116,17 +116,10 @@
           window.location.href = "index.html";
         } else {
           msg.textContent = "Kode salah!";
-          input.select(); // fokus & select untuk memudahkan input ulang
+          input.select();
         }
       } catch (err) {
         msg.textContent = "Terjadi error koneksi.";
-      }
-    });
-
-    // 🔑 Tambahkan dukungan tekan Enter di input
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") {
-        form.requestSubmit(); // Trigger form submit secara standar
       }
     });
   </script>
