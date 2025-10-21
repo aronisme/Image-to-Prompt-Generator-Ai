@@ -232,6 +232,12 @@
       flex-direction: column;
       gap: 10px;
     }
+    
+    .prompt-item.error {
+        color: #D8000C;
+        background-color: #FFD2D2;
+        border-color: #D8000C;
+    }
 
     @media (min-width: 600px) {
       .prompt-item {
@@ -310,7 +316,7 @@
 
     /* Auth section */
     #content {
-      display: none;
+      /* Dihapus: display: none; */
       text-align: center;
       padding: 20px;
     }
@@ -321,7 +327,8 @@
   </style>
 </head>
 <body>
-  <div id="content">
+
+  <div id="content" style="display: none;">
     <h1>Welcome Boss 👑</h1>
     <p>Kamu berhasil login.</p>
     <button id="logout">Logout</button>
@@ -344,7 +351,9 @@
         });
         const j = await res.json();
         if (res.ok && j.ok) {
+          // TAMPILKAN KONTEN JIKA BERHASIL
           document.getElementById("content").style.display = "block";
+          document.querySelector(".container").style.display = "block"; // <-- PERBAIKAN
         } else {
           localStorage.removeItem("auth_token");
           location.href = "login.html";
@@ -360,9 +369,11 @@
       location.href = "login.html";
     });
 
+    // Panggil checkAuth saat halaman dimuat
     checkAuth();
   </script>
- <div class="container">
+
+ <div class="container" style="display: none;">
     <h1>Batch Image Prompt Generator</h1>
 
     <div class="settings">
@@ -411,7 +422,11 @@
     <div id="loading">Processing... <div class="spinner"></div></div>
     <div id="previewContainer"></div>
     <div id="result"></div>
-    <div id="status"></div>
+    
+    <div id="status">
+      <span id="statusText"></span>
+    </div>
+
     <div class="action-buttons">
       <button id="copyAllBtn" style="display:none;">Copy All Prompts</button>
       <button id="downloadBtn" style="display:none;">Download Prompts as TXT</button>
@@ -419,14 +434,14 @@
   </div>
 
   <script>
-const cloudName = 'dwgfox722';
-const uploadPreset = 'free_upload';
-const imgbbKey = '6fc0fd628ee4e20d8ada76d6e155e26d';
-const GEMINI_MODEL = "gemini-2.5-flash";
+// --- KONFIGURASI ---
+// Kunci API ImgBB & Cloudinary DIHAPUS karena alasan keamanan.
+// Menggunakan fileToBase64 sebagai metode utama.
+const GEMINI_MODEL = "gemini-1.5-flash"; // Direkomendasikan ganti ke 1.5 Flash
 const maxFileSize = 10 * 1024 * 1024; // 10MB
-const concurrencyLimit = 3; // Max 3 files at once
+const concurrencyLimit = 3; // Max 3 file sekaligus
 
-// Input Validation
+// --- FUNGSI VALIDASI ---
 async function validateInput(file, apiKeys) {
   if (!file.type.startsWith('image/')) throw new Error('File must be an image');
   if (file.size > maxFileSize) throw new Error('File size exceeds 10MB');
@@ -434,39 +449,7 @@ async function validateInput(file, apiKeys) {
   return true;
 }
 
-async function uploadImgBB(file) {
-  const formData = new FormData();
-  formData.append('image', file);
-  formData.append('expiration', 3600);
-  const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(imgbbKey)}`, { method: 'POST', body: formData });
-  if (!res.ok) throw new Error("ImgBB upload failed");
-  return (await res.json()).data.url;
-}
-
-async function uploadCloudinary(file) {
-  const formData = new FormData();
-  formData.append('file', file);
-  formData.append('upload_preset', uploadPreset);
-  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: formData });
-  if (!res.ok) throw new Error("Cloudinary upload failed");
-  return (await res.json()).secure_url;
-}
-
-async function uploadWithFallback(file) {
-  const timeout = (prom, time) => Promise.race([prom, new Promise((_, rej) => setTimeout(() => rej('Timeout'), time))]);
-  try {
-    return await timeout(uploadImgBB(file), 10000);
-  } catch (e) {
-    console.warn('ImgBB upload failed:', e);
-    try {
-      return await timeout(uploadCloudinary(file), 10000);
-    } catch (e) {
-      console.warn('Cloudinary upload failed:', e);
-      return `data:${file.type};base64,${await fileToBase64(file)}`;
-    }
-  }
-}
-
+// --- FUNGSI UTILITAS GAMBAR ---
 async function fileToBase64(file) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -476,20 +459,53 @@ async function fileToBase64(file) {
   });
 }
 
-function normalizePrompts(rawText) {
+// --- FUNGSI PARSING PROMPT (DIPERBARUI) ---
+async function normalizePrompts(rawText) {
   rawText = rawText.replace(/```json|```/g, '').trim();
-  let prompts;
+  let prompts = [];
+  
   try {
-    prompts = JSON.parse(rawText);
-    if (!Array.isArray(prompts)) throw new Error('Parsed data is not an array');
-    prompts = prompts.filter(p => typeof p === 'string' && p.trim());
-  } catch {
-    prompts = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+    const parsedData = JSON.parse(rawText);
+    
+    if (Array.isArray(parsedData)) {
+      // Skenario 1: Gemini mengembalikan array string sederhana
+      // Contoh: ["prompt 1", "prompt 2"]
+      prompts = parsedData.filter(p => typeof p === 'string' && p.trim());
+    
+    } else if (typeof parsedData === 'object' && parsedData !== null && Array.isArray(parsedData.prompts)) {
+      // Skenario 2: Gemini mengembalikan objek {"prompts": [...]}
+      // Ini adalah kasus Anda
+      prompts = parsedData.prompts.map(item => {
+        if (typeof item === 'string') {
+          return item.trim(); // Jika itemnya: "prompt 1"
+        } else if (typeof item === 'object' && item !== null && typeof item.prompt === 'string') {
+          return item.prompt.trim(); // Jika itemnya: {"prompt": "..."}
+        } else if (typeof item === 'object' && item !== null && typeof item.prompt_text === 'string') {
+          return item.prompt_text.trim(); // Jika itemnya: {"prompt_text": "..."}
+        }
+        return null; // Abaikan format yang tidak dikenal di dalam array
+      }).filter(Boolean); // Filter semua yang null atau string kosong
+    
+    } else {
+      // Jika JSON valid tapi formatnya tidak dikenal, coba fallback
+      throw new Error('Format JSON tidak dikenal, coba fallback plain text');
+    }
+    
+  } catch (e) {
+    // Skenario 3: Gemini tidak mengembalikan JSON (plain text)
+    // atau JSON tidak dikenal (dari 'throw new Error' di atas)
+    console.warn("Parsing JSON gagal atau format tidak dikenal, fallback ke split per baris:", e.message);
+    prompts = rawText.split('\n')
+                     .map(l => l.trim())
+                     // Coba filter baris yang terlihat seperti pembuka/penutup JSON
+                     .filter(l => l && !l.startsWith('{') && !l.startsWith('}') && !l.startsWith('[') && !l.startsWith(']'));
   }
+  
   return prompts.length ? prompts : ['No valid prompts generated'];
 }
 
-async function callGeminiWithRetry(base64Image, promptText, apiKeys) {
+// --- FUNGSI API GEMINI (DIPERBARUI) ---
+async function callGeminiWithRetry(base64Image, promptText, apiKeys, mimeType) { // <-- PERBAIKAN: mimeType
   let currentApiIndex = 0;
   const maxRetries = 3;
   while (currentApiIndex < apiKeys.length) {
@@ -503,7 +519,7 @@ async function callGeminiWithRetry(base64Image, promptText, apiKeys) {
             body: JSON.stringify({
               contents: [{ parts: [
                 { text: promptText },
-                { inlineData: { mimeType: 'image/jpeg', data: base64Image } }
+                { inlineData: { mimeType: mimeType, data: base64Image } } // <-- PERBAIKAN
               ] }]
             })
           }
@@ -520,6 +536,7 @@ async function callGeminiWithRetry(base64Image, promptText, apiKeys) {
   throw new Error('All API keys exhausted');
 }
 
+// --- FUNGSI GENERATE UTAMA (DIPERBARUI) ---
 async function uploadAndGenerate() {
   const files = document.getElementById('imageInput').files;
   if (!files.length) return alert('Select at least one image.');
@@ -532,19 +549,30 @@ async function uploadAndGenerate() {
 
   const loading = document.getElementById('loading');
   const status = document.getElementById('status');
+  const statusText = document.getElementById('statusText'); // <-- PERBAIKAN
   const previewContainer = document.getElementById('previewContainer');
   const resultDiv = document.getElementById('result');
+  
+  // Hapus progress bar lama jika ada
+  const oldProgressBar = status.querySelector('.progress-bar');
+  if (oldProgressBar) oldProgressBar.remove();
+
+  // Buat progress bar baru
   const progressBar = document.createElement('div');
+  progressBar.className = 'progress-bar'; // Tambahkan class untuk styling jika perlu
   progressBar.style.width = '0%';
   progressBar.style.height = '10px';
-  progressBar.style.background = 'blue';
-  status.appendChild(progressBar);
+  progressBar.style.background = 'var(--brand)';
+  progressBar.style.borderRadius = '5px';
+  progressBar.style.transition = 'width 0.3s ease';
+  status.appendChild(progressBar); // <-- PERBAIKAN: Tambahkan ke status
+  
   loading.style.display = 'block';
   previewContainer.innerHTML = '';
   resultDiv.innerHTML = '';
   document.getElementById('copyAllBtn').style.display = 'none';
   document.getElementById('downloadBtn').style.display = 'none';
-  status.innerText = '';
+  statusText.innerText = 'Starting...'; // <-- PERBAIKAN
 
   const allPrompts = {};
   document.getElementById('copyAllBtn').onclick = () => {
@@ -577,11 +605,14 @@ async function uploadAndGenerate() {
 
     let processed = 0;
     for (const chunk of fileChunks) {
-      const promises = chunk.map(async file => {
-        status.innerText = `Processing ${file.name}...`;
-        const imageUrl = await uploadWithFallback(file);
-        status.innerText = `Uploaded ${file.name}`;
+      const promises = chunk.map(async (file) => {
+        statusText.innerText = `Processing ${file.name}...`; // <-- PERBAIKAN
+        
+        // --- PERBAIKAN KEAMANAN: Hapus ImgBB/Cloudinary, gunakan Base64 ---
         const base64Image = await fileToBase64(file);
+        const mimeType = file.type; // <-- PERBAIKAN
+        statusText.innerText = `Generating prompts for ${file.name}...`; // <-- PERBAIKAN
+        
         const styleText = styleFocus === 'auto' ? 'based on the image style' : `in ${styleFocus} style`;
         const platformText = platform === 'general' ? 'general use' : `optimized for ${platform}`;
         const variationRule = variation === 'low' ? 'Make only slight creative variations.' :
@@ -597,45 +628,74 @@ Rules:
 5. Respond strictly in JSON format.
 Style focus: ${styleText}.
         `;
-        const apiData = await callGeminiWithRetry(base64Image, promptText, apiKeysInput);
+        const apiData = await callGeminiWithRetry(base64Image, promptText, apiKeysInput, mimeType); // <-- PERBAIKAN
         const rawText = apiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        const prompts = normalizePrompts(rawText);
+        const prompts = await normalizePrompts(rawText);
         allPrompts[file.name] = prompts;
 
-        const header = document.createElement('h3');
-        header.innerText = `Prompts for ${file.name}`;
-        resultDiv.appendChild(header);
-        prompts.forEach(text => {
-          const div = document.createElement('div');
-          div.className = 'prompt-item';
-          div.innerText = text;
-          const btn = document.createElement('button');
-          btn.innerText = 'Copy';
-          btn.onclick = () => {
-            navigator.clipboard.writeText(text);
-            btn.innerText = 'Copied!';
-            setTimeout(() => btn.innerText = 'Copy', 2000);
-          };
-          div.appendChild(btn);
-          resultDiv.appendChild(div);
-        });
+        return { file, prompts }; // Kembalikan hasil untuk diproses
+      });
+
+      // --- PERBAIKAN: Error Handling dengan Promise.allSettled ---
+      const results = await Promise.allSettled(promises);
+      
+      results.forEach(result => {
         processed++;
         progressBar.style.width = `${(processed / files.length) * 100}%`;
+
+        if (result.status === 'fulfilled') {
+          const { file, prompts } = result.value;
+          const header = document.createElement('h3');
+          header.innerText = `Prompts for ${file.name}`;
+          resultDiv.appendChild(header);
+          
+          prompts.forEach(text => {
+            const div = document.createElement('div');
+            div.className = 'prompt-item';
+            
+            const p = document.createElement('p');
+            p.className = 'prompt-text';
+            p.innerText = text;
+            div.appendChild(p);
+
+            const btn = document.createElement('button');
+            btn.innerText = 'Copy';
+            btn.className = 'copy-btn';
+            btn.onclick = () => {
+              navigator.clipboard.writeText(text);
+              btn.innerText = 'Copied!';
+              setTimeout(() => btn.innerText = 'Copy', 2000);
+            };
+            div.appendChild(btn);
+            resultDiv.appendChild(div);
+          });
+        } else {
+          // Jika promise gagal, tampilkan error
+          console.error(`Gagal memproses file:`, result.reason);
+          const errorDiv = document.createElement('div');
+          errorDiv.className = 'prompt-item error'; // Tambahkan class error
+          errorDiv.innerText = `Gagal memproses file. Error: ${result.reason.message}`;
+          resultDiv.appendChild(errorDiv);
+        }
       });
-      await Promise.allSettled(promises);
     }
-    status.innerText = 'Processing complete!';
+    statusText.innerText = 'Processing complete!'; // <-- PERBAIKAN
   } catch (err) {
     console.error("Fatal error:", err);
     alert('Error: ' + err.message);
-    status.innerText = 'Error during processing.';
+    statusText.innerText = 'Error during processing.'; // <-- PERBAIKAN
   } finally {
     loading.style.display = 'none';
     document.getElementById('copyAllBtn').style.display = 'block';
     document.getElementById('downloadBtn').style.display = 'block';
+    // Hapus progress bar setelah selesai
+    setTimeout(() => {
+        if(progressBar) progressBar.remove();
+    }, 2000);
   }
 }
 
+// --- EVENT LISTENERS ---
 window.onload = () => {
   if (localStorage.getItem('apiKeys')) document.getElementById('apiKeys').value = localStorage.getItem('apiKeys');
 };
