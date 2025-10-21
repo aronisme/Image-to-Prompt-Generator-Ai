@@ -391,19 +391,61 @@ Style focus: ${styleText}.`;
       // Logout
       $('#btnLogout').onclick=()=>{ localStorage.removeItem('auth_token'); location.href='login.html' }
 
-      // File selection truth source
-      const fileInput=$('#file'), drop=$('#drop'), pick=$('#btnPick');
-      pick.addEventListener('click',()=>{ if(fileInput.showPicker) fileInput.showPicker(); else fileInput.click() });
-      $('#btnClear').onclick=()=>{ selectedFiles=[]; clearThumbs(); showToast('Cleared') }
-      fileInput.addEventListener('change',e=>{ selectedFiles=[...e.target.files]; renderThumbs(); showToast(`${selectedFiles.length} image(s) selected`) })
-      drop.addEventListener('click',()=>{ if(fileInput.showPicker) fileInput.showPicker(); else fileInput.click() });
-      drop.addEventListener('dragover',e=>{e.preventDefault(); drop.classList.add('drag')});
-      drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
-      drop.addEventListener('drop',e=>{e.preventDefault(); drop.classList.remove('drag'); selectedFiles=[...e.dataTransfer.files]; renderThumbs(); showToast(`${selectedFiles.length} dropped`) });
-      document.addEventListener('paste',(e)=>{
-        const items=[...(e.clipboardData?.items||[])].filter(i=>i.kind==='file'); if(!items.length) return;
-        selectedFiles = items.map(i=>i.getAsFile()).filter(Boolean); renderThumbs(); showToast('Image pasted')
-      });
+     // File selection truth source (✅ fixed universal picker)
+const fileInput = $('#file'),
+      drop = $('#drop'),
+      pick = $('#btnPick');
+
+// fungsi aman buat buka file dialog
+function openFileDialog() {
+  try {
+    if (typeof fileInput.showPicker === 'function') {
+      fileInput.showPicker(); // modern browser (Chrome 114+)
+    } else {
+      fileInput.click(); // fallback aman
+    }
+  } catch (err) {
+    fileInput.click(); // jaga-jaga kalau error sandbox / insecure context
+  }
+}
+
+// event listeners
+pick.addEventListener('click', openFileDialog);
+drop.addEventListener('click', openFileDialog);
+
+$('#btnClear').onclick = () => {
+  selectedFiles = [];
+  clearThumbs();
+  showToast('Cleared');
+};
+
+fileInput.addEventListener('change', (e) => {
+  selectedFiles = [...e.target.files];
+  renderThumbs();
+  showToast(`${selectedFiles.length} image(s) selected`);
+});
+
+drop.addEventListener('dragover', (e) => {
+  e.preventDefault();
+  drop.classList.add('drag');
+});
+drop.addEventListener('dragleave', () => drop.classList.remove('drag'));
+drop.addEventListener('drop', (e) => {
+  e.preventDefault();
+  drop.classList.remove('drag');
+  selectedFiles = [...e.dataTransfer.files];
+  renderThumbs();
+  showToast(`${selectedFiles.length} dropped`);
+});
+
+document.addEventListener('paste', (e) => {
+  const items = [...(e.clipboardData?.items || [])].filter(i => i.kind === 'file');
+  if (!items.length) return;
+  selectedFiles = items.map(i => i.getAsFile()).filter(Boolean);
+  renderThumbs();
+  showToast('Image pasted');
+});
+
 
       // Buttons
       $('#btnRun').onclick=async()=>{
