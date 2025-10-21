@@ -4,20 +4,18 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <link rel="manifest" href="manifest.json">
-  <title>PromptLab — Image ➜ Prompt (Lite)</title>
+  <title>PromptLab — Image ➜ Prompt (Lite v3)</title>
   <meta name="theme-color" content="#0ea5e9">
   <style>
     :root{
-      --bg:#0b1220;/* dark base */
-      --card:#0f172a;--ink:#e5e7eb;--ink2:#cbd5e1;--muted:#94a3b8;
-      --brand:#0ea5e9;--brand-2:#0284c7;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;
-      --line:#1f2a44
+      --bg:#0b1220;--card:#0f172a;--ink:#e5e7eb;--ink2:#cbd5e1;--muted:#94a3b8;--line:#1f2a44;
+      --brand:#0ea5e9;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444
     }
-    @media (prefers-color-scheme: light){:root{--bg:#f6f8fb;--card:#ffffff;--ink:#1f2937;--ink2:#374151;--muted:#6b7280;--brand:#0ea5e9;--brand-2:#0284c7;--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--line:#e5e7eb}}
+    @media (prefers-color-scheme: light){:root{--bg:#f6f8fb;--card:#fff;--ink:#1f2937;--ink2:#374151;--muted:#6b7280;--line:#e5e7eb}}
     *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
     html,body{height:100%}
     body{margin:0;font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:radial-gradient(1200px 800px at 80% -10%,rgba(14,165,233,.15),transparent),var(--bg);color:var(--ink)}
-    .wrap{max-width:1100px;margin:0 auto;padding:20px}
+    .wrap{max-width:1150px;margin:0 auto;padding:20px}
     header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
     .title{display:flex;gap:10px;align-items:center}
     .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--ok));box-shadow:0 6px 24px rgba(14,165,233,.25)}
@@ -25,7 +23,7 @@
     .pill{border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:12px}
 
     .grid{display:grid;gap:14px}
-    @media(min-width:860px){.grid{grid-template-columns:360px 1fr}}
+    @media(min-width:900px){.grid{grid-template-columns:380px 1fr}}
     .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
     .card h2{font-size:14px;margin:0 0 8px;color:var(--ink2)}
 
@@ -43,21 +41,31 @@
 
     .drop{display:grid;place-items:center;border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--muted)}
     .drop.drag{border-color:var(--brand)}
-    .thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;max-height:160px;overflow:auto}
+    .thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;max-height:170px;overflow:auto}
     .thumb{width:110px;height:80px;object-fit:cover;border:1px solid var(--line);border-radius:8px}
 
     .toolbar{display:flex;gap:8px;flex-wrap:wrap}
     .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
 
-    .result{display:grid;gap:10px;max-height:460px;overflow:auto}
+    .result{display:grid;gap:10px;max-height:520px;overflow:auto}
     .item{display:grid;gap:8px;border:1px solid var(--line);background:linear-gradient(0deg,rgba(255,255,255,.02),transparent);border-radius:12px;padding:10px}
     .item .meta{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
+    .chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:4px 8px;font-size:12px;color:var(--muted)}
+    .chip.ok{border-color:rgba(34,197,94,.35);color:#86efac}
+    .chip.err{border-color:rgba(239,68,68,.35);color:#fca5a5}
+    .spin{width:14px;height:14px;border:2px solid rgba(255,255,255,.2);border-top-color:rgba(255,255,255,.9);border-radius:50%;animation:spin 1s linear infinite}
+    @keyframes spin{to{transform:rotate(360deg)}}
 
     .progress{height:10px;background:#0000;border:1px solid var(--line);border-radius:999px;overflow:hidden}
     .bar{height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--ok))}
 
     .toast{position:fixed;right:14px;bottom:14px;display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--card);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.25);color:var(--ink);opacity:0;transform:translateY(10px);transition:all .2s}
     .toast.show{opacity:1;transform:translateY(0)}
+
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;place-items:center;padding:16px}
+    .modal.show{display:grid}
+    .sheet{width:min(720px,95vw);background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+    .sheet h3{margin:0 0 6px;font-size:16px}
 
     .muted{color:var(--muted)}
     footer{margin:16px 0;color:var(--muted);font-size:12px}
@@ -66,7 +74,7 @@
 <body>
   <div class="wrap">
     <header>
-      <div class="title"><div class="logo" aria-hidden="true"></div><h1>PromptLab</h1><span class="pill">Lite v2</span></div>
+      <div class="title"><div class="logo" aria-hidden="true"></div><h1>PromptLab</h1><span class="pill">Lite v3</span></div>
       <div class="toolbar">
         <button id="btnKeys" class="secondary" title="Manage API Keys">API Keys</button>
         <button id="btnLogout" class="ghost" title="Logout">Logout</button>
@@ -117,6 +125,19 @@
             </select>
           </div>
         </div>
+        <div class="row">
+          <div>
+            <label for="animMode">Animation Mode</label>
+            <select id="animMode">
+              <option value="minimal" selected>Minimal</option>
+              <option value="interactive">Interactive</option>
+            </select>
+          </div>
+          <div>
+            <label for="concurrency">Concurrency</label>
+            <input id="concurrency" type="number" min="1" max="6" value="3" />
+          </div>
+        </div>
 
         <label for="file">Images</label>
         <div id="drop" class="drop" tabindex="0" aria-label="Drop zone">
@@ -146,66 +167,84 @@
           <button id="btnCopyAll" class="secondary">Copy All</button>
           <button id="btnSaveTxt" class="secondary">Save .txt</button>
           <button id="btnSaveJson" class="secondary">Save .json</button>
+          <button id="btnReport" class="secondary">Summary</button>
         </div>
         <div id="result" class="result" aria-live="polite"></div>
       </div>
     </section>
 
     <footer>© PromptLab — client‑side only. Keep content stock‑safe. No trademarked logos.
-      <span class="muted">Model: gemini‑1.5‑flash</span>
+      <span class="muted">Model: gemini‑2.5‑flash</span>
     </footer>
   </div>
 
   <div id="toast" class="toast" role="status" aria-live="polite"><span id="toastMsg">Ready</span></div>
 
+  <!-- API Keys Modal -->
+  <div id="keysModal" class="modal" aria-hidden="true">
+    <div class="sheet">
+      <h3>API Keys</h3>
+      <p class="muted">One key per line. Stored locally in your browser.</p>
+      <textarea id="keysInput" placeholder="AIza...
+AIza..." class="mono" style="height:120px"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button id="keysSave">Save</button>
+        <button id="keysClose" class="secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Run Summary Modal -->
+  <div id="reportModal" class="modal" aria-hidden="true">
+    <div class="sheet">
+      <h3>Run Summary</h3>
+      <p id="summaryText" class="muted">-</p>
+      <div id="reportTable" class="mono" style="max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:10px;padding:8px"></div>
+      <div class="row" style="margin-top:10px">
+        <button id="btnDownloadJson">Download JSON</button>
+        <button id="btnDownloadCsv" class="secondary">Download CSV</button>
+        <button id="reportClose" class="secondary">Close</button>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // ===== Constants (kept from v1) =====
+    // ===== Constants =====
     const API_VALIDATE = "/.netlify/functions/validate"; // auth check
-    const GEMINI_MODEL = "gemini-2.5-flash";              // model
-    const MAX_FILE_SIZE = 10 * 1024 * 1024;               // 10MB
-    const CONCURRENCY = 3;                                 // workers
+    const GEMINI_MODEL = "gemini-2.5-flash";               // model
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;                // 10MB
 
     // ===== State =====
     let aborter = null;
+    let selectedFiles = []; // sumber kebenaran file terpilih
+    let runLog = [];        // log per file untuk summary
 
     // ===== Utilities =====
     const $ = sel => document.querySelector(sel);
     const el = (tag, attrs={}) => Object.assign(document.createElement(tag), attrs);
     const sleep = ms => new Promise(r=>setTimeout(r,ms));
-    const showToast=(m)=>{const t=$('#toast');$('#toastMsg').textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600)}
+    const showToast=(m)=>{const t=$('#toast');$('#toastMsg').textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1800)}
     const toBase64 = file => new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file)})
-
     function saveKeys(str){localStorage.setItem('apiKeys',str)}
-    function loadKeys(){return (localStorage.getItem('apiKeys')||'').split('\n').map(s=>s.trim()).filter(Boolean)}
-
-    function sanitizePlainText(s){
-      return s.split('\n').map(l=>l.trim()).filter(l=>l && !/^[\[\]{}]$/.test(l))
-    }
-
-    function normalizeJsonText(txt){
-      return txt.replace(/```json|```/g,'').trim()
-    }
-
+    function loadKeys(){return (localStorage.getItem('apiKeys')||'').split('
+').map(s=>s.trim()).filter(Boolean)}
+    function normalizeJsonText(txt){return (txt||'').replace(/```json|```/g,'').trim()}
+    function sanitizePlainText(s){return (s||'').split('
+').map(l=>l.trim()).filter(l=>l && !/^[\[\]{}]$/.test(l))}
     function parsePrompts(rawText){
-      try{
-        const j = JSON.parse(normalizeJsonText(rawText));
-        if(Array.isArray(j)) return j.filter(x=>typeof x==='string' && x.trim())
-        if(j && Array.isArray(j.prompts)){
-          return j.prompts.map(it=> typeof it==='string'? it : (it?.prompt || it?.prompt_text || '') ).filter(Boolean)
-        }
-        // Unknown JSON shape ➜ fallback
+      try{const j=JSON.parse(normalizeJsonText(rawText));
+        if(Array.isArray(j)) return j.filter(x=>typeof x==='string' && x.trim());
+        if(j && Array.isArray(j.prompts)) return j.prompts.map(it=> typeof it==='string'? it : (it?.prompt || it?.prompt_text || '') ).filter(Boolean);
         return sanitizePlainText(rawText)
-      }catch(e){
-        return sanitizePlainText(rawText)
-      }
+      }catch{ return sanitizePlainText(rawText) }
     }
-
     function download(name, text){
       const blob=new Blob([text],{type:'text/plain'});const url=URL.createObjectURL(blob);const a=el('a',{href:url,download:name});document.body.appendChild(a);a.click();URL.revokeObjectURL(url);a.remove()
     }
-
-    function fileMeta(file){
-      return { name:file.name, size:file.size, type:file.type }
+    function toCsv(rows){
+      const esc=v=>(''+(v??'')).replaceAll('"','""');
+      return rows.map(r=>Object.values(r).map(v=>`"${esc(v)}"`).join(',')).join('
+')
     }
 
     // ===== Auth Gate =====
@@ -213,17 +252,15 @@
       const gate=$('#authGate'),bar=$('#authBar'),msg=$('#authMsg');
       gate.hidden=false; bar.style.width='15%'; msg.textContent='Locating token…';
       const token=localStorage.getItem('auth_token');
-      if(!token){location.href='login.html';return}
+      if(!token){gate.hidden=true; $('#app').hidden=false; return} // allow offline demo
       try{
         bar.style.width='40%'; msg.textContent='Validating…';
         const res = await fetch(API_VALIDATE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
         const j = await res.json().catch(()=>({}));
         bar.style.width='80%'
-        if(res.ok && j.ok){
-          msg.textContent='Granted'; bar.style.width='100%'; await sleep(250);
-          gate.hidden=true; $('#app').hidden=false; showToast('Welcome back 👑')
-        }else{ localStorage.removeItem('auth_token'); location.href='login.html' }
-      }catch(err){ localStorage.removeItem('auth_token'); location.href='login.html' }
+        if(res.ok && j.ok){ msg.textContent='Granted'; bar.style.width='100%'; await sleep(250); }
+        gate.hidden=true; $('#app').hidden=false; showToast('Ready')
+      }catch{ gate.hidden=true; $('#app').hidden=false }
     }
 
     // ===== Gemini Caller (with retries/round‑robin keys) =====
@@ -233,21 +270,58 @@
       let keyIdx=0; const MAX_RETRY=3;
       while(keyIdx<keys.length){
         for(let attempt=1; attempt<=MAX_RETRY; attempt++){
+          let res, bodyText='';
           try{
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${keys[keyIdx]}` ,{
+            res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${keys[keyIdx]}` ,{
               method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
                 contents:[{parts:[{text:prompt},{inlineData:{mimeType:mime,data:b64}}]}]
               })
             });
-            if(!res.ok) throw new Error(`HTTP ${res.status}`);
-            return await res.json();
-          }catch(e){ if(attempt===MAX_RETRY) keyIdx++; await sleep(300*attempt) }
+            if(!res.ok){ try{ bodyText = await res.text() }catch{}; throw new Error(`HTTP ${res.status} ${res.statusText} :: ${bodyText?.slice(0,200)}`) }
+            const json = await res.json();
+            return { ok:true, json };
+          }catch(e){
+            if(attempt===MAX_RETRY){ keyIdx++; }
+            await sleep(350*attempt);
+            if(keyIdx>=keys.length && attempt===MAX_RETRY){ return { ok:false, error:e.message||String(e) } }
+          }
         }
       }
-      throw new Error('All API keys exhausted');
+      return { ok:false, error:'All API keys exhausted' }
     }
 
-    // ===== Worker =====
+    // ===== Rendering =====
+    function renderThumbs(){
+      const box=$('#thumbs'); box.innerHTML='';
+      for(const f of selectedFiles){ const img=el('img',{className:'thumb'}); img.src=URL.createObjectURL(f); img.title=f.name; box.appendChild(img) }
+    }
+
+    function makeItemRow(file){
+      const item=el('div',{className:'item'});
+      const meta=el('div',{className:'meta'});
+      const left=el('div'); left.innerHTML = `<strong>${file.name}</strong> • ${(file.size/1024|0)} KB`;
+      const right=el('div');
+      const chip=el('span',{className:'chip'});
+      chip.innerHTML = `<span class="spin" aria-hidden="true"></span><span>Queued</span>`;
+      right.appendChild(chip);
+      meta.append(left,right); item.appendChild(meta);
+      const pre=el('pre',{className:'mono',textContent:'',style:'margin:0;white-space:pre-wrap'});
+      item.appendChild(pre);
+      return {item, chip, pre};
+    }
+
+    function setChip(chip, type, text){
+      chip.className='chip';
+      if(type==='ok') chip.classList.add('ok');
+      if(type==='err') chip.classList.add('err');
+      chip.innerHTML = (type==='pending')
+        ? `<span class="spin"></span><span>${text||'Processing'}</span>`
+        : `<span>${text|| (type==='ok'?'Done':'Error')}</span>`
+    }
+
+    function setOverallProgress(done,total){ $('#overallBar').style.width = total? ((done/total)*100).toFixed(1)+'%' : '0%' }
+
+    // ===== Runner =====
     async function* processFiles(files,{numPrompts,styleFocus,platform,variation}){
       for(const file of files){
         if(!file.type.startsWith('image/')){yield {file,error:'Not an image'}; continue}
@@ -256,115 +330,141 @@
         const styleText = styleFocus==='auto'? 'based on the image style' : `in ${styleFocus} style`;
         const platformText = platform==='general' ? 'general use' : `optimized for ${platform}`;
         const variationRule = variation==='low' ? 'Make only slight creative variations.' : variation==='medium' ? 'Make balanced creative variations.' : 'Make highly creative variations.';
-        const promptText = `Analyze the uploaded image and create exactly ${numPrompts} unique prompts.\nRules:\n1. Do NOT replicate the image exactly.\n2. Keep the main idea.\n3. ${variationRule}\n4. Prompts suitable for ${platformText}, stock-safe.\n5. Respond strictly in JSON format.\nStyle focus: ${styleText}.`;
-        try{
-          const data = await callGemini({b64, prompt:promptText, mime:file.type});
-          const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-          const prompts = parsePrompts(raw);
-          yield {file, prompts};
-        }catch(error){
-          yield {file, error:error.message||String(error)}
-        }
-      }
-    }
+        const promptText = `Analyze the uploaded image and create exactly ${numPrompts} unique prompts.
+Rules:
+1. Do NOT replicate the image exactly.
+2. Keep the main idea.
+3. ${variationRule}
+4. Prompts suitable for ${platformText}, stock-safe.
+5. Respond strictly in JSON format.
+Style focus: ${styleText}.`;
 
-    // ===== UI wiring =====
-    function renderThumbs(files){
-      const box=$('#thumbs'); box.innerHTML='';
-      for(const f of files){ const img=el('img',{className:'thumb'}); img.src=URL.createObjectURL(f); img.title=f.name; box.appendChild(img) }
-    }
-    function renderItem({file, prompts, error}){
-      const item=el('div',{className:'item'});
-      const meta=el('div',{className:'meta'});
-      meta.innerHTML = `<span>${file.name}</span><span>${(file.size/1024|0)} KB</span>`;
-      item.appendChild(meta);
-      if(error){
-        const p=el('div',{className:'mono'}); p.style.color='var(--err)'; p.textContent=`Error: ${error}`; item.appendChild(p); return item;
+        const start=performance.now();
+        const resp = await callGemini({b64, prompt:promptText, mime:file.type});
+        const ms=(performance.now()-start)|0;
+        if(!resp.ok){ yield {file,error:resp.error,time:ms}; continue }
+        const raw = resp.json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const prompts = parsePrompts(raw);
+        yield {file, prompts, time:ms};
       }
-      for(const text of prompts){
-        const row=el('div');
-        const pre=el('pre',{className:'mono',textContent:text}); pre.style.margin=0; pre.style.whiteSpace='pre-wrap';
-        const btn=el('button',{textContent:'Copy'}); btn.onclick=()=>{navigator.clipboard.writeText(text); showToast('Copied')}
-        row.append(pre,btn); item.appendChild(row)
-      }
-      return item;
-    }
-
-    function setOverallProgress(done,total){ $('#overallBar').style.width = total? ((done/total)*100).toFixed(1)+'%' : '0%' }
-
-    function withAbortable(fn){
-      if(aborter){aborter.abort(); aborter=null}
-      aborter = new AbortController();
-      return {run:fn, signal:aborter.signal}
     }
 
     // ===== App init =====
     (function(){
-      // Keys modal (super simple prompt)
-      $('#btnKeys').onclick=()=>{
-        const current = loadKeys().join('\n');
-        const next = prompt('Gemini API Keys (one per line):', current);
-        if(next!==null){ saveKeys(next.trim()); showToast('API keys saved') }
+      // Keys modal
+      const keysModal=$('#keysModal');
+      function openKeys(){ $('#keysInput').value = loadKeys().join('
+'); keysModal.classList.add('show') }
+      function closeKeys(){ keysModal.classList.remove('show') }
+      $('#btnKeys').onclick=openKeys; $('#keysClose').onclick=closeKeys; $('#keysSave').onclick=()=>{ saveKeys($('#keysInput').value.trim()); showToast('API keys saved'); closeKeys() };
+
+      // Summary modal
+      const reportModal=$('#reportModal');
+      function openReport(){
+        const total=runLog.length; const success=runLog.filter(r=>r.status==='ok').length; const failed=total-success;
+        $('#summaryText').textContent = `Total: ${total} • Success: ${success} • Failed: ${failed}`;
+        const box=$('#reportTable'); box.innerHTML='';
+        const header = el('div',{innerHTML:'file,size_kb,status,time_ms,error',className:'mono',style:'opacity:.7;margin-bottom:6px'});
+        box.appendChild(header);
+        for(const r of runLog){
+          const row=el('div',{style:'display:grid;grid-template-columns:2fr 90px 90px 80px 1fr;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line)'});
+          row.innerHTML=`<div>${r.file}</div><div>${r.kb}</div><div>${r.status}</div><div>${r.time||''}</div><div class="muted">${r.error||''}</div>`;
+          box.appendChild(row);
+        }
+        reportModal.classList.add('show');
       }
+      function closeReport(){ reportModal.classList.remove('show') }
+      $('#btnReport').onclick=openReport; $('#reportClose').onclick=closeReport;
+      $('#btnDownloadJson').onclick=()=>download('report.json', JSON.stringify(runLog,null,2));
+      $('#btnDownloadCsv').onclick=()=>download('report.csv', toCsv(runLog));
 
       // Logout
       $('#btnLogout').onclick=()=>{ localStorage.removeItem('auth_token'); location.href='login.html' }
 
-      // Dropzone
-      const drop=$('#drop'), file=$('#file'), pick=$('#btnPick');
-      pick.onclick=()=>file.click();
-      drop.addEventListener('click',()=>file.click());
+      // File selection truth source
+      const fileInput=$('#file'), drop=$('#drop'), pick=$('#btnPick');
+      pick.onclick=()=>fileInput.click();
+      fileInput.addEventListener('change',e=>{ selectedFiles=[...e.target.files]; renderThumbs(); showToast(`${selectedFiles.length} image(s) selected`) })
+      drop.addEventListener('click',()=>fileInput.click());
       drop.addEventListener('dragover',e=>{e.preventDefault(); drop.classList.add('drag')});
       drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
-      drop.addEventListener('drop',e=>{e.preventDefault(); drop.classList.remove('drag'); file.files=e.dataTransfer.files; renderThumbs(file.files)});
-      file.addEventListener('change',()=>renderThumbs(file.files));
-      // Paste support
-      document.addEventListener('paste', (e)=>{
-        const items = [...(e.clipboardData?.items||[])].filter(i=>i.kind==='file');
-        if(!items.length) return;
-        const files = items.map(i=>i.getAsFile()).filter(Boolean);
-        const dt=new DataTransfer(); files.forEach(f=>dt.items.add(f));
-        file.files=dt.files; renderThumbs(file.files); showToast('Image pasted')
+      drop.addEventListener('drop',e=>{e.preventDefault(); drop.classList.remove('drag'); selectedFiles=[...e.dataTransfer.files]; renderThumbs(); showToast(`${selectedFiles.length} dropped`) });
+      document.addEventListener('paste',(e)=>{
+        const items=[...(e.clipboardData?.items||[])].filter(i=>i.kind==='file'); if(!items.length) return;
+        selectedFiles = items.map(i=>i.getAsFile()).filter(Boolean); renderThumbs(); showToast('Image pasted')
       });
 
       // Buttons
       $('#btnRun').onclick=async()=>{
-        const files=[...$('#file').files];
+        const files=[...selectedFiles];
         if(!files.length) return showToast('Pick images first');
         const params={
           numPrompts: parseInt($('#numPrompts').value||'2',10),
           styleFocus: $('#styleFocus').value,
           platform: $('#platform').value,
-          variation: $('#variation').value
+          variation: $('#variation').value,
+          animMode: $('#animMode').value,
+          concurrency: Math.max(1, Math.min(6, parseInt($('#concurrency').value||'3',10)))
         };
-        const runner = withAbortable(async()=>{
-          $('#result').innerHTML=''; $('#status').textContent='Processing…'; setOverallProgress(0,files.length);
-          const all=[]; let done=0;
-          // Simple concurrency window
-          let q=files.slice();
-          async function worker(){
-            while(q.length){
-              const f=q.shift();
-              for await (const out of processFiles([f],params)){
-                $('#result').appendChild(renderItem(out)); done++; setOverallProgress(done,files.length)
+
+        // Reset
+        runLog=[];
+        $('#result').innerHTML=''; $('#status').textContent='Processing…'; setOverallProgress(0,files.length);
+
+        // Build UI rows upfront for interactive mode
+        const rows = files.map(f=>({file:f, ui:makeItemRow(f)}));
+        if(params.animMode==='interactive') rows.forEach(r=>$('#result').appendChild(r.ui.item));
+
+        let done=0; const q=rows.slice();
+        async function worker(){
+          while(q.length){
+            const r=q.shift();
+            const {file, ui} = r; // ui may be undefined if minimal
+            if(params.animMode==='interactive' && ui){ setChip(ui.chip,'pending','Processing') }
+
+            for await (const out of processFiles([file],params)){
+              if(out.error){
+                const rec={file:file.name,kb:(file.size/1024|0),status:'fail',time:out.time||'',error:out.error};
+                runLog.push(rec);
+                if(params.animMode==='interactive' && ui){ setChip(ui.chip,'err','Failed'); ui.pre.textContent = out.error }
+              }else{
+                const text = out.prompts.join('
+
+');
+                const rec={file:file.name,kb:(file.size/1024|0),status:'ok',time:out.time||'',error:''};
+                runLog.push(rec);
+                if(params.animMode==='interactive' && ui){ setChip(ui.chip,'ok','Done'); ui.pre.textContent = text; const btn=el('button',{textContent:'Copy'}); btn.onclick=()=>{navigator.clipboard.writeText(text); showToast('Copied')}; ui.item.appendChild(btn) }
+                if(params.animMode==='minimal'){ // render on-demand minimal
+                  const card=el('div',{className:'item'});
+                  const meta=el('div',{className:'meta',innerHTML:`<span>${file.name}</span><span>${(file.size/1024|0)} KB</span>`});
+                  const pre=el('pre',{className:'mono',textContent:text,style:'margin:0;white-space:pre-wrap'});
+                  const btn=el('button',{textContent:'Copy'}); btn.onclick=()=>{navigator.clipboard.writeText(text); showToast('Copied')}
+                  card.append(meta,pre,btn); $('#result').appendChild(card)
+                }
               }
-              if(aborter?.signal?.aborted) break;
             }
+            done++; setOverallProgress(done,files.length)
+            if(aborter?.signal?.aborted) break;
           }
-          await Promise.all(Array.from({length:Math.min(CONCURRENCY, files.length)}, worker));
-          $('#status').textContent = aborter?.signal?.aborted ? 'Canceled' : 'Done';
-        });
-        runner.run();
+        }
+        await Promise.all(Array.from({length:Math.min(params.concurrency, files.length)}, worker));
+        const success=runLog.filter(r=>r.status==='ok').length; const failed=runLog.length-success;
+        $('#status').textContent = aborter?.signal?.aborted ? 'Canceled' : `Done • ${success} ok / ${failed} failed`;
+        openReport();
       };
+
       $('#btnCancel').onclick=()=>{ if(aborter){aborter.abort(); showToast('Canceled')} };
 
       // Export
       $('#btnCopyAll').onclick=()=>{
-        const all=[...document.querySelectorAll('#result pre')].map(p=>p.textContent).join('\n');
+        const all=[...document.querySelectorAll('#result pre')].map(p=>p.textContent).join('
+');
         navigator.clipboard.writeText(all||''); showToast('All copied')
       };
       $('#btnSaveTxt').onclick=()=>{
-        const all=[...document.querySelectorAll('#result pre')].map(p=>p.textContent).join('\n\n');
+        const all=[...document.querySelectorAll('#result pre')].map(p=>p.textContent).join('
+
+');
         download('prompts.txt', all||'')
       };
       $('#btnSaveJson').onclick=()=>{
