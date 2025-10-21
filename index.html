@@ -419,71 +419,106 @@
   </div>
 
   <script>
-    const cloudName = 'dwgfox722';
-    const uploadPreset = 'free_upload';
-    const imgbbKey = '6fc0fd628ee4e20d8ada76d6e155e26d';
-    const GEMINI_MODEL = "gemini-2.5-flash";
+const cloudName = 'dwgfox722';
+const uploadPreset = 'free_upload';
+const imgbbKey = '6fc0fd628ee4e20d8ada76d6e155e26d';
+const GEMINI_MODEL = "gemini-2.5-flash";
+const maxFileSize = 10 * 1024 * 1024; // 10MB
+const concurrencyLimit = 3; // Max 3 files at once
 
-    async function uploadImgBB(file) {
-      const formData = new FormData();
-      formData.append('image', file);
-      formData.append('expiration', 3600);
-      const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(imgbbKey)}`, { method: 'POST', body: formData });
-      if (!res.ok) throw new Error("ImgBB upload failed");
-      return res.json();
+// Input Validation
+async function validateInput(file, apiKeys) {
+  if (!file.type.startsWith('image/')) throw new Error('File must be an image');
+  if (file.size > maxFileSize) throw new Error('File size exceeds 10MB');
+  if (!apiKeys?.length) throw new Error('No API keys provided');
+  return true;
+}
+
+async function uploadImgBB(file) {
+  const formData = new FormData();
+  formData.append('image', file);
+  formData.append('expiration', 3600);
+  const res = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(imgbbKey)}`, { method: 'POST', body: formData });
+  if (!res.ok) throw new Error("ImgBB upload failed");
+  return (await res.json()).data.url;
+}
+
+async function uploadCloudinary(file) {
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', uploadPreset);
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: formData });
+  if (!res.ok) throw new Error("Cloudinary upload failed");
+  return (await res.json()).secure_url;
+}
+
+async function uploadWithFallback(file) {
+  const timeout = (prom, time) => Promise.race([prom, new Promise((_, rej) => setTimeout(() => rej('Timeout'), time))]);
+  try {
+    return await timeout(uploadImgBB(file), 10000);
+  } catch (e) {
+    console.warn('ImgBB upload failed:', e);
+    try {
+      return await timeout(uploadCloudinary(file), 10000);
+    } catch (e) {
+      console.warn('Cloudinary upload failed:', e);
+      return `data:${file.type};base64,${await fileToBase64(file)}`;
     }
+  }
+}
 
-    async function uploadCloudinary(file) {
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('upload_preset', uploadPreset);
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, { method: 'POST', body: formData });
-      if (!res.ok) throw new Error("Cloudinary upload failed");
-      return res.json();
-    }
+async function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onerror = reject;
+  });
+}
 
-    async function fileToBase64(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = reject;
-      });
-    }
+function normalizePrompts(rawText) {
+  rawText = rawText.replace(/```json|```/g, '').trim();
+  let prompts;
+  try {
+    prompts = JSON.parse(rawText);
+    if (!Array.isArray(prompts)) throw new Error('Parsed data is not an array');
+    prompts = prompts.filter(p => typeof p === 'string' && p.trim());
+  } catch {
+    prompts = rawText.split('\n').map(l => l.trim()).filter(Boolean);
+  }
+  return prompts.length ? prompts : ['No valid prompts generated'];
+}
 
-    // ✅ Normalize prompts jadi array string bersih
-    function normalizePrompts(prompts, includeStyle = false) {
-      const result = [];
-      if (!prompts) return result;
-
-      if (typeof prompts === "string") return [prompts];
-
-      if (Array.isArray(prompts)) {
-        prompts.forEach(p => {
-          if (typeof p === "string") result.push(p);
-          else if (typeof p === "object") {
-            if (p.prompt) result.push(p.prompt);
-            if (includeStyle && p.style) result.push(p.style);
+async function callGeminiWithRetry(base64Image, promptText, apiKeys) {
+  let currentApiIndex = 0;
+  const maxRetries = 3;
+  while (currentApiIndex < apiKeys.length) {
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKeys[currentApiIndex]}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ parts: [
+                { text: promptText },
+                { inlineData: { mimeType: 'image/jpeg', data: base64Image } }
+              ] }]
+            })
           }
-        });
-        return result;
+        );
+        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        return await res.json();
+      } catch (e) {
+        console.warn(`Attempt ${attempt} with key ${currentApiIndex + 1} failed:`, e);
+        if (attempt === maxRetries) currentApiIndex++;
+        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
       }
-
-      if (typeof prompts === "object") {
-        Object.values(prompts).forEach(val => {
-          if (typeof val === "string") result.push(val);
-          else if (typeof val === "object") {
-            if (val.prompt) result.push(val.prompt);
-            if (includeStyle && val.style) result.push(val.style);
-          } else {
-            result.push(String(val));
-          }
-        });
-        return result;
-      }
-
-      return result;
     }
+  }
+  throw new Error('All API keys exhausted');
+}
 
 async function uploadAndGenerate() {
   const files = document.getElementById('imageInput').files;
@@ -494,12 +529,16 @@ async function uploadAndGenerate() {
   const platform = document.getElementById('platform').value;
   const variation = document.getElementById('variation').value;
   const apiKeysInput = document.getElementById('apiKeys').value.trim().split('\n').filter(Boolean);
-  if (!apiKeysInput.length) return alert('Enter at least one API key.');
 
   const loading = document.getElementById('loading');
   const status = document.getElementById('status');
   const previewContainer = document.getElementById('previewContainer');
   const resultDiv = document.getElementById('result');
+  const progressBar = document.createElement('div');
+  progressBar.style.width = '0%';
+  progressBar.style.height = '10px';
+  progressBar.style.background = 'blue';
+  status.appendChild(progressBar);
   loading.style.display = 'block';
   previewContainer.innerHTML = '';
   resultDiv.innerHTML = '';
@@ -521,10 +560,8 @@ async function uploadAndGenerate() {
     URL.revokeObjectURL(url);
   };
 
-  let currentApiIndex = 0;
-
   try {
-    // tampilkan preview image
+    await validateInput(files[0], apiKeysInput);
     Array.from(files).forEach(file => {
       const img = document.createElement('img');
       img.src = URL.createObjectURL(file);
@@ -533,30 +570,24 @@ async function uploadAndGenerate() {
       previewContainer.appendChild(img);
     });
 
-    for (let file of files) {
-      status.innerText = `Uploading ${file.name}...`;
-      try { 
-        await uploadImgBB(file); 
-        status.innerText = `Uploaded to ImgBB: ${file.name}`; 
-      }
-      catch { 
-        try { 
-          await uploadCloudinary(file); 
-          status.innerText = `Uploaded to Cloudinary: ${file.name}`; 
-        }
-        catch { 
-          status.innerText = `Failed external upload: ${file.name}`; 
-        } 
-      }
+    const fileChunks = [];
+    for (let i = 0; i < files.length; i += concurrencyLimit) {
+      fileChunks.push(Array.from(files).slice(i, i + concurrencyLimit));
+    }
 
-      const base64Image = await fileToBase64(file);
-      const styleText = styleFocus === 'auto' ? 'based on the image style' : `in ${styleFocus} style`;
-      const platformText = platform === 'general' ? 'general use' : `optimized for ${platform}`;
-      const variationRule = variation === 'low' ? 'Make only slight creative variations.' :
-                            variation === 'medium' ? 'Make balanced creative variations.' :
-                            'Make highly creative variations.';
-
-      const promptText = `
+    let processed = 0;
+    for (const chunk of fileChunks) {
+      const promises = chunk.map(async file => {
+        status.innerText = `Processing ${file.name}...`;
+        const imageUrl = await uploadWithFallback(file);
+        status.innerText = `Uploaded ${file.name}`;
+        const base64Image = await fileToBase64(file);
+        const styleText = styleFocus === 'auto' ? 'based on the image style' : `in ${styleFocus} style`;
+        const platformText = platform === 'general' ? 'general use' : `optimized for ${platform}`;
+        const variationRule = variation === 'low' ? 'Make only slight creative variations.' :
+                             variation === 'medium' ? 'Make balanced creative variations.' :
+                             'Make highly creative variations.';
+        const promptText = `
 Analyze the uploaded image and create exactly ${numPrompts} unique prompts.
 Rules:
 1. Do NOT replicate the image exactly.
@@ -565,94 +596,37 @@ Rules:
 4. Prompts suitable for ${platformText}, stock-safe.
 5. Respond strictly in JSON format.
 Style focus: ${styleText}.
-      `;
+        `;
+        const apiData = await callGeminiWithRetry(base64Image, promptText, apiKeysInput);
+        const rawText = apiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+        const prompts = normalizePrompts(rawText);
+        allPrompts[file.name] = prompts;
 
-      let apiSuccess = false, apiData;
-      while (!apiSuccess && currentApiIndex < apiKeysInput.length) {
-        const currentKey = apiKeysInput[currentApiIndex];
-        status.innerText = `Generating (API key #${currentApiIndex+1})...`;
-
-        try {
-          const apiRes = await fetch(
-            `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${currentKey}`,
-            {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                contents: [{ parts: [
-                  { text: promptText },
-                  { inlineData: { mimeType: file.type, data: base64Image } }
-                ] }]
-              })
-            }
-          );
-
-          if (apiRes.ok) {
-            apiData = await apiRes.json();
-            apiSuccess = true;
-          }
-          else if (apiRes.status === 429) {
-            console.warn(`⚠️ 429 Too Many Requests (key #${currentApiIndex+1}). Coba key berikutnya...`);
-            currentApiIndex++;
-            await new Promise(r => setTimeout(r, 1200));
-          }
-          else if (apiRes.status === 503) {
-            console.warn(`⚠️ 503 Service Unavailable (key #${currentApiIndex+1}). Retry key yang sama...`);
-            const errorText = await apiRes.text().catch(()=>"(no body)");
-            console.error("Detail 503 body:", errorText);
-            await new Promise(r => setTimeout(r, 2000));
-            continue; // ulangi dengan key sama
-          }
-          else {
-            const errorText = await apiRes.text().catch(()=>"(no body)");
-            throw new Error(`API error ${apiRes.status}: ${apiRes.statusText}. Body: ${errorText}`);
-          }
-        } catch (err) {
-          console.error(`❌ Fetch error (key #${currentApiIndex+1}):`, err);
-          currentApiIndex++;
-          if (currentApiIndex >= apiKeysInput.length) {
-            throw err; // habis semua key → lempar error ke atas
-          }
-        }
-      }
-
-      // proses hasil dari API
-      let rawText = apiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      rawText = rawText.replace(/```json|```/g, '').trim();
-
-      let prompts;
-      try { 
-        prompts = normalizePrompts(JSON.parse(rawText)); 
-      }
-      catch { 
-        prompts = rawText.split('\n').map(l => l.trim()).filter(Boolean); 
-      }
-
-      allPrompts[file.name] = prompts;
-
-      const header = document.createElement('h3');
-      header.innerText = `Prompts for ${file.name}`;
-      resultDiv.appendChild(header);
-
-      prompts.forEach(text => {
-        const div = document.createElement('div');
-        div.className = 'prompt-item';
-        div.innerText = text;
-        const btn = document.createElement('button');
-        btn.innerText = 'Copy';
-        btn.onclick = () => {
-          navigator.clipboard.writeText(text);
-          btn.innerText = 'Copied!';
-          setTimeout(()=>btn.innerText='Copy',2000);
-        };
-        div.appendChild(btn);
-        resultDiv.appendChild(div);
+        const header = document.createElement('h3');
+        header.innerText = `Prompts for ${file.name}`;
+        resultDiv.appendChild(header);
+        prompts.forEach(text => {
+          const div = document.createElement('div');
+          div.className = 'prompt-item';
+          div.innerText = text;
+          const btn = document.createElement('button');
+          btn.innerText = 'Copy';
+          btn.onclick = () => {
+            navigator.clipboard.writeText(text);
+            btn.innerText = 'Copied!';
+            setTimeout(() => btn.innerText = 'Copy', 2000);
+          };
+          div.appendChild(btn);
+          resultDiv.appendChild(div);
+        });
+        processed++;
+        progressBar.style.width = `${(processed / files.length) * 100}%`;
       });
+      await Promise.allSettled(promises);
     }
-
     status.innerText = 'Processing complete!';
   } catch (err) {
-    console.error("❌ Fatal error in uploadAndGenerate:", err);
+    console.error("Fatal error:", err);
     alert('Error: ' + err.message);
     status.innerText = 'Error during processing.';
   } finally {
@@ -669,9 +643,7 @@ document.getElementById('saveApiKey').onclick = () => {
   localStorage.setItem('apiKeys', document.getElementById('apiKeys').value.trim());
   alert('API keys saved!');
 };
-
-
-  </script>
+</script>
   
 </body>
 </html>
