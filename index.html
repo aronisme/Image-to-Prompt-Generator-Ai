@@ -444,6 +444,8 @@ Style focus: ${styleText}.`;
               }
             }
             done++; setOverallProgress(done,files.length)
+            await sleep(3000); // delay 1 detik antar gambar
+
             if(aborter?.signal?.aborted) break;
           }
         }
