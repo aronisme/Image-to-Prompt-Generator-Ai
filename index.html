@@ -4,706 +4,381 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
   <link rel="manifest" href="manifest.json">
-  <title>Image to Prompt Generator Ai</title>
+  <title>PromptLab — Image ➜ Prompt (Lite)</title>
+  <meta name="theme-color" content="#0ea5e9">
   <style>
-    :root {
-      --bg1: #e6f0fa;
-      --bg2: #ffffff;
-      --ink: #333;
-      --ink2: #34495e;
-      --border: #dfe6e9;
-      --brand: #3498db;
-      --brandDark: #2980b9;
-      --ok: #27ae60;
-      --okDark: #219653;
-      --muted: #7f8c8d;
-      --card: #fff;
+    :root{
+      --bg:#0b1220;/* dark base */
+      --card:#0f172a;--ink:#e5e7eb;--ink2:#cbd5e1;--muted:#94a3b8;
+      --brand:#0ea5e9;--brand-2:#0284c7;--ok:#22c55e;--warn:#f59e0b;--err:#ef4444;
+      --line:#1f2a44
     }
+    @media (prefers-color-scheme: light){:root{--bg:#f6f8fb;--card:#ffffff;--ink:#1f2937;--ink2:#374151;--muted:#6b7280;--brand:#0ea5e9;--brand-2:#0284c7;--ok:#16a34a;--warn:#ca8a04;--err:#dc2626;--line:#e5e7eb}}
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{height:100%}
+    body{margin:0;font:16px/1.55 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;background:radial-gradient(1200px 800px at 80% -10%,rgba(14,165,233,.15),transparent),var(--bg);color:var(--ink)}
+    .wrap{max-width:1100px;margin:0 auto;padding:20px}
+    header{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-bottom:16px}
+    .title{display:flex;gap:10px;align-items:center}
+    .logo{width:34px;height:34px;border-radius:10px;background:linear-gradient(135deg,var(--brand),var(--ok));box-shadow:0 6px 24px rgba(14,165,233,.25)}
+    h1{font-size:18px;margin:0}
+    .pill{border:1px solid var(--line);border-radius:999px;padding:6px 10px;color:var(--muted);font-size:12px}
 
-    * {
-      box-sizing: border-box;
-      -webkit-tap-highlight-color: transparent;
-    }
+    .grid{display:grid;gap:14px}
+    @media(min-width:860px){.grid{grid-template-columns:360px 1fr}}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .card h2{font-size:14px;margin:0 0 8px;color:var(--ink2)}
 
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-      margin: 0;
-      padding: 16px;
-      background: linear-gradient(to bottom, var(--bg1), var(--bg2));
-      color: var(--ink);
-      line-height: 1.5;
-    }
+    label{display:block;margin:10px 0 6px;color:var(--ink2);font-weight:600;font-size:13px}
+    input,select,textarea,button{width:100%;border:1px solid var(--line);background:#0000;color:var(--ink);border-radius:10px;padding:10px 12px;font-size:14px}
+    input:focus,select:focus,textarea:focus,button:focus{outline:none;box-shadow:0 0 0 3px rgba(14,165,233,.25)}
+    textarea{min-height:90px;resize:vertical}
+    button{cursor:pointer;background:var(--brand);border-color:transparent;font-weight:700}
+    button.secondary{background:#0000;border-color:var(--line)}
+    button.ghost{background:#0000;border-color:transparent;color:var(--muted)}
+    button.danger{background:var(--err)}
 
-    .container {
-      background: var(--card);
-      border-radius: 16px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-      padding: 18px;
-      margin-bottom: 20px;
-    }
+    .row{display:flex;gap:10px}
+    .row > *{flex:1}
 
-    h1 {
-      font-size: 1.8rem;
-      text-align: center;
-      color: #2c3e50;
-      margin: 0 0 12px;
-      line-height: 1.3;
-    }
+    .drop{display:grid;place-items:center;border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--muted)}
+    .drop.drag{border-color:var(--brand)}
+    .thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;max-height:160px;overflow:auto}
+    .thumb{width:110px;height:80px;object-fit:cover;border:1px solid var(--line);border-radius:8px}
 
-    .subtitle {
-      text-align: center;
-      color: var(--muted);
-      margin: 0 0 20px;
-      font-size: 0.92rem;
-      padding: 0 8px;
-    }
+    .toolbar{display:flex;gap:8px;flex-wrap:wrap}
+    .mono{font-family: ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace}
 
-    .settings {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 16px;
-      margin-bottom: 18px;
-    }
+    .result{display:grid;gap:10px;max-height:460px;overflow:auto}
+    .item{display:grid;gap:8px;border:1px solid var(--line);background:linear-gradient(0deg,rgba(255,255,255,.02),transparent);border-radius:12px;padding:10px}
+    .item .meta{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
 
-    @media (min-width: 768px) {
-      .settings {
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      }
-    }
+    .progress{height:10px;background:#0000;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+    .bar{height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--ok))}
 
-    label {
-      font-weight: 600;
-      display: block;
-      margin-bottom: 8px;
-      color: var(--ink2);
-      font-size: 0.95rem;
-    }
+    .toast{position:fixed;right:14px;bottom:14px;display:flex;gap:10px;align-items:center;padding:10px 12px;border-radius:12px;background:var(--card);border:1px solid var(--line);box-shadow:0 10px 30px rgba(0,0,0,.25);color:var(--ink);opacity:0;transform:translateY(10px);transition:all .2s}
+    .toast.show{opacity:1;transform:translateY(0)}
 
-    input, select, textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      font-size: 1rem;
-      background: #fff;
-      transition: border-color 0.2s;
-    }
-
-    input:focus, select:focus, textarea:focus {
-      outline: none;
-      border-color: var(--brand);
-      box-shadow: 0 0 0 3px rgba(52,152,219,0.15);
-    }
-
-    textarea {
-      min-height: 100px;
-      resize: vertical;
-    }
-
-    .file-upload {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin: 16px 0;
-    }
-
-    @media (min-width: 600px) {
-      .file-upload {
-        flex-direction: row;
-        align-items: center;
-      }
-      #imageInput {
-        flex: 1;
-      }
-    }
-
-    button {
-      padding: 14px 20px;
-      background: var(--brand);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
-      font-size: 1.05rem;
-      font-weight: 600;
-      transition: background 0.2s, transform 0.1s;
-      min-height: 48px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    button:hover {
-      background: var(--brandDark);
-    }
-
-    button:active {
-      transform: scale(0.98);
-    }
-
-    #saveApiKey {
-      background: #6c757d;
-      margin-top: 8px;
-      font-size: 1rem;
-      font-weight: normal;
-    }
-
-    #saveApiKey:hover {
-      background: #5a6268;
-    }
-
-    #loading {
-      display: none;
-      text-align: center;
-      color: var(--ok);
-      font-size: 1.1rem;
-      margin: 16px 0;
-      font-weight: 500;
-    }
-
-    .spinner {
-      border: 3px solid rgba(0,0,0,0.1);
-      border-top: 3px solid var(--brand);
-      border-radius: 50%;
-      width: 20px;
-      height: 20px;
-      animation: spin 1s linear infinite;
-      display: inline-block;
-      margin-left: 8px;
-      vertical-align: middle;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
-    #previewContainer {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 10px;
-      max-height: 280px;
-      overflow-y: auto;
-      margin: 16px 0;
-      padding: 10px;
-      border: 1px solid var(--border);
-      border-radius: 10px;
-      background: #fafafa;
-    }
-
-    .preview {
-      max-width: 100%;
-      height: auto;
-      max-height: 120px;
-      object-fit: cover;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-    }
-
-    .hint {
-      font-size: 0.85rem;
-      color: var(--muted);
-      margin: 6px 0 0;
-    }
-
-    #result {
-      background: #f9f9f9;
-      border: 1px solid var(--border);
-      padding: 16px;
-      border-radius: 12px;
-      margin-top: 16px;
-      max-height: 500px;
-      overflow-y: auto;
-    }
-
-    h3.section {
-      margin: 18px 0 10px;
-      font-size: 1.25rem;
-      color: var(--ink2);
-    }
-
-    .prompt-item {
-      margin-bottom: 14px;
-      background: white;
-      padding: 14px;
-      border-radius: 10px;
-      border: 1px solid var(--border);
-      box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    
-    .prompt-item.error {
-        color: #D8000C;
-        background-color: #FFD2D2;
-        border-color: #D8000C;
-    }
-
-    @media (min-width: 600px) {
-      .prompt-item {
-        flex-direction: row;
-        align-items: flex-start;
-      }
-    }
-
-    .prompt-text {
-      flex: 1;
-      white-space: pre-wrap;
-      font-size: 0.95rem;
-      line-height: 1.5;
-    }
-
-    .small {
-      font-size: 0.85rem;
-      color: var(--muted);
-    }
-
-    .prompt-item .copy-btn {
-      background: var(--ok);
-      padding: 10px 16px;
-      border-radius: 8px;
-      min-width: 80px;
-      font-size: 0.95rem;
-      font-weight: 600;
-    }
-
-    .prompt-item .copy-btn:hover {
-      background: var(--okDark);
-    }
-
-    .action-buttons {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin-top: 20px;
-    }
-
-    @media (min-width: 600px) {
-      .action-buttons {
-        flex-direction: row;
-        justify-content: center;
-      }
-    }
-
-    #status {
-      text-align: center;
-      color: var(--muted);
-      font-style: italic;
-      margin-top: 12px;
-      font-size: 0.95rem;
-      min-height: 1.5em;
-    }
-
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border: 1px solid var(--border);
-      border-radius: 999px;
-      background: white;
-      color: #555;
-      font-size: 0.8rem;
-    }
-
-    .muted-box {
-      background: white;
-      border: 1px dashed var(--border);
-      padding: 12px;
-      border-radius: 10px;
-      color: #666;
-      font-size: 0.9rem;
-      margin: 16px 0;
-    }
-
-    /* Auth section */
-    #content {
-      /* Dihapus: display: none; */
-      text-align: center;
-      padding: 20px;
-    }
-
-    #logout {
-      margin-top: 12px;
-    }
+    .muted{color:var(--muted)}
+    footer{margin:16px 0;color:var(--muted);font-size:12px}
   </style>
 </head>
 <body>
+  <div class="wrap">
+    <header>
+      <div class="title"><div class="logo" aria-hidden="true"></div><h1>PromptLab</h1><span class="pill">Lite v2</span></div>
+      <div class="toolbar">
+        <button id="btnKeys" class="secondary" title="Manage API Keys">API Keys</button>
+        <button id="btnLogout" class="ghost" title="Logout">Logout</button>
+      </div>
+    </header>
 
-  <div id="content" style="display: none;">
-    <h1>Welcome Boss 👑</h1>
-    <p>Kamu berhasil login.</p>
-    <button id="logout">Logout</button>
+    <div id="authGate" class="card" hidden>
+      <h2>Checking access…</h2>
+      <div class="progress" aria-label="Auth progress"><div class="bar" id="authBar"></div></div>
+      <p class="muted" id="authMsg">Connecting to server…</p>
+    </div>
+
+    <section class="grid" id="app" hidden>
+      <!-- Left: Controls -->
+      <div class="card">
+        <h2>Settings</h2>
+        <div class="row">
+          <div>
+            <label for="numPrompts">Prompts per Image</label>
+            <input id="numPrompts" type="number" min="1" max="10" value="2" />
+          </div>
+          <div>
+            <label for="variation">Variation Level</label>
+            <select id="variation">
+              <option value="low">Low (slight)</option>
+              <option value="medium" selected>Medium</option>
+              <option value="high">High</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="styleFocus">Style Focus</label>
+            <select id="styleFocus">
+              <option value="auto">Auto (follow image)</option>
+              <option value="realistic">Realistic</option>
+              <option value="abstract">Abstract</option>
+              <option value="cartoon">Cartoon</option>
+              <option value="minimalist">Minimalist</option>
+            </select>
+          </div>
+          <div>
+            <label for="platform">Target Platform</label>
+            <select id="platform">
+              <option value="adobe_stock">Adobe Stock</option>
+              <option value="shutterstock">Shutterstock</option>
+              <option value="general">General</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="file">Images</label>
+        <div id="drop" class="drop" tabindex="0" aria-label="Drop zone">
+          <div>
+            <p class="muted">Drag & drop / click to select / paste (Ctrl+V)</p>
+            <input id="file" type="file" accept="image/*" multiple hidden />
+            <button id="btnPick" class="secondary">Choose Images</button>
+          </div>
+        </div>
+        <div id="thumbs" class="thumbs" aria-live="polite"></div>
+
+        <div class="row" style="margin-top:10px">
+          <button id="btnRun">Generate</button>
+          <button id="btnCancel" class="danger">Cancel</button>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="progress" aria-label="Overall progress"><div class="bar" id="overallBar"></div></div>
+          <p class="muted" id="status">Idle</p>
+        </div>
+      </div>
+
+      <!-- Right: Output -->
+      <div class="card">
+        <h2>Output</h2>
+        <div class="toolbar" style="margin-bottom:10px">
+          <button id="btnCopyAll" class="secondary">Copy All</button>
+          <button id="btnSaveTxt" class="secondary">Save .txt</button>
+          <button id="btnSaveJson" class="secondary">Save .json</button>
+        </div>
+        <div id="result" class="result" aria-live="polite"></div>
+      </div>
+    </section>
+
+    <footer>© PromptLab — client‑side only. Keep content stock‑safe. No trademarked logos.
+      <span class="muted">Model: gemini‑1.5‑flash</span>
+    </footer>
   </div>
 
-  <script>
-    const API_VALIDATE = "/.netlify/functions/validate";
+  <div id="toast" class="toast" role="status" aria-live="polite"><span id="toastMsg">Ready</span></div>
 
-    async function checkAuth() {
-      const token = localStorage.getItem("auth_token");
-      if (!token) {
-        location.href = "login.html";
-        return;
-      }
-      try {
-        const res = await fetch(API_VALIDATE, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token })
-        });
-        const j = await res.json();
-        if (res.ok && j.ok) {
-          // TAMPILKAN KONTEN JIKA BERHASIL
-          document.getElementById("content").style.display = "block";
-          document.querySelector(".container").style.display = "block"; // <-- PERBAIKAN
-        } else {
-          localStorage.removeItem("auth_token");
-          location.href = "login.html";
+  <script>
+    // ===== Constants (kept from v1) =====
+    const API_VALIDATE = "/.netlify/functions/validate"; // auth check
+    const GEMINI_MODEL = "gemini-1.5-flash";              // model
+    const MAX_FILE_SIZE = 10 * 1024 * 1024;               // 10MB
+    const CONCURRENCY = 3;                                 // workers
+
+    // ===== State =====
+    let aborter = null;
+
+    // ===== Utilities =====
+    const $ = sel => document.querySelector(sel);
+    const el = (tag, attrs={}) => Object.assign(document.createElement(tag), attrs);
+    const sleep = ms => new Promise(r=>setTimeout(r,ms));
+    const showToast=(m)=>{const t=$('#toast');$('#toastMsg').textContent=m;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600)}
+    const toBase64 = file => new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result.split(',')[1]);r.onerror=rej;r.readAsDataURL(file)})
+
+    function saveKeys(str){localStorage.setItem('apiKeys',str)}
+    function loadKeys(){return (localStorage.getItem('apiKeys')||'').split('\n').map(s=>s.trim()).filter(Boolean)}
+
+    function sanitizePlainText(s){
+      return s.split('\n').map(l=>l.trim()).filter(l=>l && !/^[\[\]{}]$/.test(l))
+    }
+
+    function normalizeJsonText(txt){
+      return txt.replace(/```json|```/g,'').trim()
+    }
+
+    function parsePrompts(rawText){
+      try{
+        const j = JSON.parse(normalizeJsonText(rawText));
+        if(Array.isArray(j)) return j.filter(x=>typeof x==='string' && x.trim())
+        if(j && Array.isArray(j.prompts)){
+          return j.prompts.map(it=> typeof it==='string'? it : (it?.prompt || it?.prompt_text || '') ).filter(Boolean)
         }
-      } catch (err) {
-        localStorage.removeItem("auth_token");
-        location.href = "login.html";
+        // Unknown JSON shape ➜ fallback
+        return sanitizePlainText(rawText)
+      }catch(e){
+        return sanitizePlainText(rawText)
       }
     }
 
-    document.getElementById("logout").addEventListener("click", () => {
-      localStorage.removeItem("auth_token");
-      location.href = "login.html";
-    });
-
-    // Panggil checkAuth saat halaman dimuat
-    checkAuth();
-  </script>
-
- <div class="container" style="display: none;">
-    <h1>Batch Image Prompt Generator</h1>
-
-    <div class="settings">
-      <div>
-        <label for="numPrompts">Prompts per Image:</label>
-        <input type="number" id="numPrompts" min="1" max="10" value="2">
-      </div>
-      <div>
-        <label for="styleFocus">Style Focus:</label>
-        <select id="styleFocus">
-          <option value="auto">Auto (Follow Image)</option>
-          <option value="realistic">Realistic</option>
-          <option value="abstract">Abstract</option>
-          <option value="cartoon">Cartoon</option>
-          <option value="minimalist">Minimalist</option>
-        </select>
-      </div>
-      <div>
-        <label for="platform">Target Platform:</label>
-        <select id="platform">
-          <option value="adobe_stock">Adobe Stock</option>
-          <option value="shutterstock">Shutterstock</option>
-          <option value="general">General</option>
-        </select>
-      </div>
-      <div>
-        <label for="variation">Variation Level:</label>
-        <select id="variation">
-          <option value="low">Low (slight changes)</option>
-          <option value="medium" selected>Medium (balanced)</option>
-          <option value="high">High (very different)</option>
-        </select>
-      </div>
-      <div style="grid-column: span 2;">
-        <label for="apiKeys">Gemini API Keys (one per line):</label>
-        <textarea id="apiKeys"></textarea>
-        <button id="saveApiKey">Save API Keys</button>
-      </div>
-    </div>
-
-    <div class="file-upload">
-      <input type="file" id="imageInput" accept="image/*" multiple>
-      <button onclick="uploadAndGenerate()">Upload & Generate</button>
-    </div>
-
-    <div id="loading">Processing... <div class="spinner"></div></div>
-    <div id="previewContainer"></div>
-    <div id="result"></div>
-    
-    <div id="status">
-      <span id="statusText"></span>
-    </div>
-
-    <div class="action-buttons">
-      <button id="copyAllBtn" style="display:none;">Copy All Prompts</button>
-      <button id="downloadBtn" style="display:none;">Download Prompts as TXT</button>
-    </div>
-  </div>
-
-  <script>
-// --- KONFIGURASI ---
-// Kunci API ImgBB & Cloudinary DIHAPUS karena alasan keamanan.
-// Menggunakan fileToBase64 sebagai metode utama.
-const GEMINI_MODEL = "gemini-1.5-flash"; // Direkomendasikan ganti ke 1.5 Flash
-const maxFileSize = 10 * 1024 * 1024; // 10MB
-const concurrencyLimit = 3; // Max 3 file sekaligus
-
-// --- FUNGSI VALIDASI ---
-async function validateInput(file, apiKeys) {
-  if (!file.type.startsWith('image/')) throw new Error('File must be an image');
-  if (file.size > maxFileSize) throw new Error('File size exceeds 10MB');
-  if (!apiKeys?.length) throw new Error('No API keys provided');
-  return true;
-}
-
-// --- FUNGSI UTILITAS GAMBAR ---
-async function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = reject;
-  });
-}
-
-// --- FUNGSI PARSING PROMPT (DIPERBARUI) ---
-async function normalizePrompts(rawText) {
-  rawText = rawText.replace(/```json|```/g, '').trim();
-  let prompts = [];
-  
-  try {
-    const parsedData = JSON.parse(rawText);
-    
-    if (Array.isArray(parsedData)) {
-      // Skenario 1: Gemini mengembalikan array string sederhana
-      // Contoh: ["prompt 1", "prompt 2"]
-      prompts = parsedData.filter(p => typeof p === 'string' && p.trim());
-    
-    } else if (typeof parsedData === 'object' && parsedData !== null && Array.isArray(parsedData.prompts)) {
-      // Skenario 2: Gemini mengembalikan objek {"prompts": [...]}
-      // Ini adalah kasus Anda
-      prompts = parsedData.prompts.map(item => {
-        if (typeof item === 'string') {
-          return item.trim(); // Jika itemnya: "prompt 1"
-        } else if (typeof item === 'object' && item !== null && typeof item.prompt === 'string') {
-          return item.prompt.trim(); // Jika itemnya: {"prompt": "..."}
-        } else if (typeof item === 'object' && item !== null && typeof item.prompt_text === 'string') {
-          return item.prompt_text.trim(); // Jika itemnya: {"prompt_text": "..."}
-        }
-        return null; // Abaikan format yang tidak dikenal di dalam array
-      }).filter(Boolean); // Filter semua yang null atau string kosong
-    
-    } else {
-      // Jika JSON valid tapi formatnya tidak dikenal, coba fallback
-      throw new Error('Format JSON tidak dikenal, coba fallback plain text');
+    function download(name, text){
+      const blob=new Blob([text],{type:'text/plain'});const url=URL.createObjectURL(blob);const a=el('a',{href:url,download:name});document.body.appendChild(a);a.click();URL.revokeObjectURL(url);a.remove()
     }
-    
-  } catch (e) {
-    // Skenario 3: Gemini tidak mengembalikan JSON (plain text)
-    // atau JSON tidak dikenal (dari 'throw new Error' di atas)
-    console.warn("Parsing JSON gagal atau format tidak dikenal, fallback ke split per baris:", e.message);
-    prompts = rawText.split('\n')
-                     .map(l => l.trim())
-                     // Coba filter baris yang terlihat seperti pembuka/penutup JSON
-                     .filter(l => l && !l.startsWith('{') && !l.startsWith('}') && !l.startsWith('[') && !l.startsWith(']'));
-  }
-  
-  return prompts.length ? prompts : ['No valid prompts generated'];
-}
 
-// --- FUNGSI API GEMINI (DIPERBARUI) ---
-async function callGeminiWithRetry(base64Image, promptText, apiKeys, mimeType) { // <-- PERBAIKAN: mimeType
-  let currentApiIndex = 0;
-  const maxRetries = 3;
-  while (currentApiIndex < apiKeys.length) {
-    for (let attempt = 1; attempt <= maxRetries; attempt++) {
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${apiKeys[currentApiIndex]}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              contents: [{ parts: [
-                { text: promptText },
-                { inlineData: { mimeType: mimeType, data: base64Image } } // <-- PERBAIKAN
-              ] }]
-            })
+    function fileMeta(file){
+      return { name:file.name, size:file.size, type:file.type }
+    }
+
+    // ===== Auth Gate =====
+    async function checkAuth(){
+      const gate=$('#authGate'),bar=$('#authBar'),msg=$('#authMsg');
+      gate.hidden=false; bar.style.width='15%'; msg.textContent='Locating token…';
+      const token=localStorage.getItem('auth_token');
+      if(!token){location.href='login.html';return}
+      try{
+        bar.style.width='40%'; msg.textContent='Validating…';
+        const res = await fetch(API_VALIDATE,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token})});
+        const j = await res.json().catch(()=>({}));
+        bar.style.width='80%'
+        if(res.ok && j.ok){
+          msg.textContent='Granted'; bar.style.width='100%'; await sleep(250);
+          gate.hidden=true; $('#app').hidden=false; showToast('Welcome back 👑')
+        }else{ localStorage.removeItem('auth_token'); location.href='login.html' }
+      }catch(err){ localStorage.removeItem('auth_token'); location.href='login.html' }
+    }
+
+    // ===== Gemini Caller (with retries/round‑robin keys) =====
+    async function callGemini({b64, prompt, mime}){
+      const keys = loadKeys();
+      if(!keys.length) throw new Error('No API keys. Open “API Keys”.');
+      let keyIdx=0; const MAX_RETRY=3;
+      while(keyIdx<keys.length){
+        for(let attempt=1; attempt<=MAX_RETRY; attempt++){
+          try{
+            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${keys[keyIdx]}` ,{
+              method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({
+                contents:[{parts:[{text:prompt},{inlineData:{mimeType:mime,data:b64}}]}]
+              })
+            });
+            if(!res.ok) throw new Error(`HTTP ${res.status}`);
+            return await res.json();
+          }catch(e){ if(attempt===MAX_RETRY) keyIdx++; await sleep(300*attempt) }
+        }
+      }
+      throw new Error('All API keys exhausted');
+    }
+
+    // ===== Worker =====
+    async function* processFiles(files,{numPrompts,styleFocus,platform,variation}){
+      for(const file of files){
+        if(!file.type.startsWith('image/')){yield {file,error:'Not an image'}; continue}
+        if(file.size>MAX_FILE_SIZE){yield {file,error:'File > 10MB'}; continue}
+        const b64 = await toBase64(file);
+        const styleText = styleFocus==='auto'? 'based on the image style' : `in ${styleFocus} style`;
+        const platformText = platform==='general' ? 'general use' : `optimized for ${platform}`;
+        const variationRule = variation==='low' ? 'Make only slight creative variations.' : variation==='medium' ? 'Make balanced creative variations.' : 'Make highly creative variations.';
+        const promptText = `Analyze the uploaded image and create exactly ${numPrompts} unique prompts.\nRules:\n1. Do NOT replicate the image exactly.\n2. Keep the main idea.\n3. ${variationRule}\n4. Prompts suitable for ${platformText}, stock-safe.\n5. Respond strictly in JSON format.\nStyle focus: ${styleText}.`;
+        try{
+          const data = await callGemini({b64, prompt:promptText, mime:file.type});
+          const raw = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const prompts = parsePrompts(raw);
+          yield {file, prompts};
+        }catch(error){
+          yield {file, error:error.message||String(error)}
+        }
+      }
+    }
+
+    // ===== UI wiring =====
+    function renderThumbs(files){
+      const box=$('#thumbs'); box.innerHTML='';
+      for(const f of files){ const img=el('img',{className:'thumb'}); img.src=URL.createObjectURL(f); img.title=f.name; box.appendChild(img) }
+    }
+    function renderItem({file, prompts, error}){
+      const item=el('div',{className:'item'});
+      const meta=el('div',{className:'meta'});
+      meta.innerHTML = `<span>${file.name}</span><span>${(file.size/1024|0)} KB</span>`;
+      item.appendChild(meta);
+      if(error){
+        const p=el('div',{className:'mono'}); p.style.color='var(--err)'; p.textContent=`Error: ${error}`; item.appendChild(p); return item;
+      }
+      for(const text of prompts){
+        const row=el('div');
+        const pre=el('pre',{className:'mono',textContent:text}); pre.style.margin=0; pre.style.whiteSpace='pre-wrap';
+        const btn=el('button',{textContent:'Copy'}); btn.onclick=()=>{navigator.clipboard.writeText(text); showToast('Copied')}
+        row.append(pre,btn); item.appendChild(row)
+      }
+      return item;
+    }
+
+    function setOverallProgress(done,total){ $('#overallBar').style.width = total? ((done/total)*100).toFixed(1)+'%' : '0%' }
+
+    function withAbortable(fn){
+      if(aborter){aborter.abort(); aborter=null}
+      aborter = new AbortController();
+      return {run:fn, signal:aborter.signal}
+    }
+
+    // ===== App init =====
+    (function(){
+      // Keys modal (super simple prompt)
+      $('#btnKeys').onclick=()=>{
+        const current = loadKeys().join('\n');
+        const next = prompt('Gemini API Keys (one per line):', current);
+        if(next!==null){ saveKeys(next.trim()); showToast('API keys saved') }
+      }
+
+      // Logout
+      $('#btnLogout').onclick=()=>{ localStorage.removeItem('auth_token'); location.href='login.html' }
+
+      // Dropzone
+      const drop=$('#drop'), file=$('#file'), pick=$('#btnPick');
+      pick.onclick=()=>file.click();
+      drop.addEventListener('click',()=>file.click());
+      drop.addEventListener('dragover',e=>{e.preventDefault(); drop.classList.add('drag')});
+      drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+      drop.addEventListener('drop',e=>{e.preventDefault(); drop.classList.remove('drag'); file.files=e.dataTransfer.files; renderThumbs(file.files)});
+      file.addEventListener('change',()=>renderThumbs(file.files));
+      // Paste support
+      document.addEventListener('paste', (e)=>{
+        const items = [...(e.clipboardData?.items||[])].filter(i=>i.kind==='file');
+        if(!items.length) return;
+        const files = items.map(i=>i.getAsFile()).filter(Boolean);
+        const dt=new DataTransfer(); files.forEach(f=>dt.items.add(f));
+        file.files=dt.files; renderThumbs(file.files); showToast('Image pasted')
+      });
+
+      // Buttons
+      $('#btnRun').onclick=async()=>{
+        const files=[...$('#file').files];
+        if(!files.length) return showToast('Pick images first');
+        const params={
+          numPrompts: parseInt($('#numPrompts').value||'2',10),
+          styleFocus: $('#styleFocus').value,
+          platform: $('#platform').value,
+          variation: $('#variation').value
+        };
+        const runner = withAbortable(async()=>{
+          $('#result').innerHTML=''; $('#status').textContent='Processing…'; setOverallProgress(0,files.length);
+          const all=[]; let done=0;
+          // Simple concurrency window
+          let q=files.slice();
+          async function worker(){
+            while(q.length){
+              const f=q.shift();
+              for await (const out of processFiles([f],params)){
+                $('#result').appendChild(renderItem(out)); done++; setOverallProgress(done,files.length)
+              }
+              if(aborter?.signal?.aborted) break;
+            }
           }
-        );
-        if (!res.ok) throw new Error(`HTTP ${res.status}: ${res.statusText}`);
-        return await res.json();
-      } catch (e) {
-        console.warn(`Attempt ${attempt} with key ${currentApiIndex + 1} failed:`, e);
-        if (attempt === maxRetries) currentApiIndex++;
-        await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, attempt)));
-      }
-    }
-  }
-  throw new Error('All API keys exhausted');
-}
+          await Promise.all(Array.from({length:Math.min(CONCURRENCY, files.length)}, worker));
+          $('#status').textContent = aborter?.signal?.aborted ? 'Canceled' : 'Done';
+        });
+        runner.run();
+      };
+      $('#btnCancel').onclick=()=>{ if(aborter){aborter.abort(); showToast('Canceled')} };
 
-// --- FUNGSI GENERATE UTAMA (DIPERBARUI) ---
-async function uploadAndGenerate() {
-  const files = document.getElementById('imageInput').files;
-  if (!files.length) return alert('Select at least one image.');
+      // Export
+      $('#btnCopyAll').onclick=()=>{
+        const all=[...document.querySelectorAll('#result pre')].map(p=>p.textContent).join('\n');
+        navigator.clipboard.writeText(all||''); showToast('All copied')
+      };
+      $('#btnSaveTxt').onclick=()=>{
+        const all=[...document.querySelectorAll('#result pre')].map(p=>p.textContent).join('\n\n');
+        download('prompts.txt', all||'')
+      };
+      $('#btnSaveJson').onclick=()=>{
+        const groups=[...document.querySelectorAll('.item')].map(card=>{
+          const name=(card.querySelector('.meta span')||{}).textContent||'';
+          const arr=[...card.querySelectorAll('pre')].map(p=>p.textContent);
+          return {[name]:arr}
+        });
+        download('prompts.json', JSON.stringify(groups,null,2))
+      };
 
-  const numPrompts = parseInt(document.getElementById('numPrompts').value);
-  const styleFocus = document.getElementById('styleFocus').value;
-  const platform = document.getElementById('platform').value;
-  const variation = document.getElementById('variation').value;
-  const apiKeysInput = document.getElementById('apiKeys').value.trim().split('\n').filter(Boolean);
-
-  const loading = document.getElementById('loading');
-  const status = document.getElementById('status');
-  const statusText = document.getElementById('statusText'); // <-- PERBAIKAN
-  const previewContainer = document.getElementById('previewContainer');
-  const resultDiv = document.getElementById('result');
-  
-  // Hapus progress bar lama jika ada
-  const oldProgressBar = status.querySelector('.progress-bar');
-  if (oldProgressBar) oldProgressBar.remove();
-
-  // Buat progress bar baru
-  const progressBar = document.createElement('div');
-  progressBar.className = 'progress-bar'; // Tambahkan class untuk styling jika perlu
-  progressBar.style.width = '0%';
-  progressBar.style.height = '10px';
-  progressBar.style.background = 'var(--brand)';
-  progressBar.style.borderRadius = '5px';
-  progressBar.style.transition = 'width 0.3s ease';
-  status.appendChild(progressBar); // <-- PERBAIKAN: Tambahkan ke status
-  
-  loading.style.display = 'block';
-  previewContainer.innerHTML = '';
-  resultDiv.innerHTML = '';
-  document.getElementById('copyAllBtn').style.display = 'none';
-  document.getElementById('downloadBtn').style.display = 'none';
-  statusText.innerText = 'Starting...'; // <-- PERBAIKAN
-
-  const allPrompts = {};
-  document.getElementById('copyAllBtn').onclick = () => {
-    const allText = Object.values(allPrompts).flat().join('\n');
-    navigator.clipboard.writeText(allText || 'No prompts generated.');
-  };
-  document.getElementById('downloadBtn').onclick = () => {
-    const allText = Object.values(allPrompts).flat().join('\n\n');
-    const blob = new Blob([allText || 'No prompts generated.'], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'prompts.txt'; a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  try {
-    await validateInput(files[0], apiKeysInput);
-    Array.from(files).forEach(file => {
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(file);
-      img.className = 'preview';
-      img.title = file.name;
-      previewContainer.appendChild(img);
-    });
-
-    const fileChunks = [];
-    for (let i = 0; i < files.length; i += concurrencyLimit) {
-      fileChunks.push(Array.from(files).slice(i, i + concurrencyLimit));
-    }
-
-    let processed = 0;
-    for (const chunk of fileChunks) {
-      const promises = chunk.map(async (file) => {
-        statusText.innerText = `Processing ${file.name}...`; // <-- PERBAIKAN
-        
-        // --- PERBAIKAN KEAMANAN: Hapus ImgBB/Cloudinary, gunakan Base64 ---
-        const base64Image = await fileToBase64(file);
-        const mimeType = file.type; // <-- PERBAIKAN
-        statusText.innerText = `Generating prompts for ${file.name}...`; // <-- PERBAIKAN
-        
-        const styleText = styleFocus === 'auto' ? 'based on the image style' : `in ${styleFocus} style`;
-        const platformText = platform === 'general' ? 'general use' : `optimized for ${platform}`;
-        const variationRule = variation === 'low' ? 'Make only slight creative variations.' :
-                             variation === 'medium' ? 'Make balanced creative variations.' :
-                             'Make highly creative variations.';
-        const promptText = `
-Analyze the uploaded image and create exactly ${numPrompts} unique prompts.
-Rules:
-1. Do NOT replicate the image exactly.
-2. Keep the main idea.
-3. ${variationRule}
-4. Prompts suitable for ${platformText}, stock-safe.
-5. Respond strictly in JSON format.
-Style focus: ${styleText}.
-        `;
-        const apiData = await callGeminiWithRetry(base64Image, promptText, apiKeysInput, mimeType); // <-- PERBAIKAN
-        const rawText = apiData?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        const prompts = await normalizePrompts(rawText);
-        allPrompts[file.name] = prompts;
-
-        return { file, prompts }; // Kembalikan hasil untuk diproses
-      });
-
-      // --- PERBAIKAN: Error Handling dengan Promise.allSettled ---
-      const results = await Promise.allSettled(promises);
-      
-      results.forEach(result => {
-        processed++;
-        progressBar.style.width = `${(processed / files.length) * 100}%`;
-
-        if (result.status === 'fulfilled') {
-          const { file, prompts } = result.value;
-          const header = document.createElement('h3');
-          header.innerText = `Prompts for ${file.name}`;
-          resultDiv.appendChild(header);
-          
-          prompts.forEach(text => {
-            const div = document.createElement('div');
-            div.className = 'prompt-item';
-            
-            const p = document.createElement('p');
-            p.className = 'prompt-text';
-            p.innerText = text;
-            div.appendChild(p);
-
-            const btn = document.createElement('button');
-            btn.innerText = 'Copy';
-            btn.className = 'copy-btn';
-            btn.onclick = () => {
-              navigator.clipboard.writeText(text);
-              btn.innerText = 'Copied!';
-              setTimeout(() => btn.innerText = 'Copy', 2000);
-            };
-            div.appendChild(btn);
-            resultDiv.appendChild(div);
-          });
-        } else {
-          // Jika promise gagal, tampilkan error
-          console.error(`Gagal memproses file:`, result.reason);
-          const errorDiv = document.createElement('div');
-          errorDiv.className = 'prompt-item error'; // Tambahkan class error
-          errorDiv.innerText = `Gagal memproses file. Error: ${result.reason.message}`;
-          resultDiv.appendChild(errorDiv);
-        }
-      });
-    }
-    statusText.innerText = 'Processing complete!'; // <-- PERBAIKAN
-  } catch (err) {
-    console.error("Fatal error:", err);
-    alert('Error: ' + err.message);
-    statusText.innerText = 'Error during processing.'; // <-- PERBAIKAN
-  } finally {
-    loading.style.display = 'none';
-    document.getElementById('copyAllBtn').style.display = 'block';
-    document.getElementById('downloadBtn').style.display = 'block';
-    // Hapus progress bar setelah selesai
-    setTimeout(() => {
-        if(progressBar) progressBar.remove();
-    }, 2000);
-  }
-}
-
-// --- EVENT LISTENERS ---
-window.onload = () => {
-  if (localStorage.getItem('apiKeys')) document.getElementById('apiKeys').value = localStorage.getItem('apiKeys');
-};
-document.getElementById('saveApiKey').onclick = () => {
-  localStorage.setItem('apiKeys', document.getElementById('apiKeys').value.trim());
-  alert('API keys saved!');
-};
-</script>
-  
+      // Boot
+      checkAuth();
+    })();
+  </script>
 </body>
 </html>
