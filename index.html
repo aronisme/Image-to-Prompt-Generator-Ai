@@ -88,7 +88,6 @@
     </div>
 
     <section class="grid" id="app" hidden>
-      <!-- Left: Controls -->
       <div class="card">
         <h2>Settings</h2>
         <div class="row">
@@ -160,7 +159,6 @@
         </div>
       </div>
 
-      <!-- Right: Output -->
       <div class="card">
         <h2>Output</h2>
         <div class="toolbar" style="margin-bottom:10px">
@@ -180,7 +178,6 @@
 
   <div id="toast" class="toast" role="status" aria-live="polite"><span id="toastMsg">Ready</span></div>
 
-  <!-- API Keys Modal -->
   <div id="keysModal" class="modal" aria-hidden="true">
     <div class="sheet">
       <h3>API Keys</h3>
@@ -194,7 +191,6 @@ AIza..." class="mono" style="height:120px"></textarea>
     </div>
   </div>
 
-  <!-- Run Summary Modal -->
   <div id="reportModal" class="modal" aria-hidden="true">
     <div class="sheet">
       <h3>Run Summary</h3>
@@ -394,6 +390,158 @@ Style focus: ${styleText}.`;
         selectedFiles = items.map(i=>i.getAsFile()).filter(Boolean); renderThumbs(); showToast('Image pasted')
       });
 
+POST /v1beta/{model=models/*}:streamGenerateContent Menghasilkan respons streaming dari model.
+- Metode baru models.streamGenerateContent telah ditambahkan ke Generative Language API. Metode ini memungkinkan Anda mengirimkan permintaan generateContent dan menerima respons dalam bentuk streaming (chunked).
+- Respons streaming dapat mengurangi waktu tunggu yang dirasakan oleh pengguna dan memungkinkan Anda menangani respons yang berpotensi besar secara lebih efisien.
+- Metode ini tersedia untuk model 'gemini-1.5-flash-latest', 'gemini-1.5-pro-latest', dan 'gemini-pro'.
+- REST Resource: v1beta.models
+- Metode |
+--- | ---
+- streamGenerateContent | POST /v1beta/{model=models/*}:streamGenerateContent Menghasilkan respons streaming dari model.
+- generateContent | POST /v1beta/{model=models/*}:generateContent Menghasilkan respons dari model.
+- ...
+- Lihat dokumentasi referensi models.streamGenerateContent untuk detail selengkapnya.
+- 13 Mei 2024
+- Peningkatan model gemini-1.5-flash-latest
+- Model gemini-1.5-flash-latest telah diperbarui. Versi baru ini mencakup peningkatan kualitas dan perbaikan bug.
+- 9 Mei 2024
+- Model gemini-1.5-flash-latest dan gemini-1.5-pro-latest
+- Model gemini-1.5-flash-latest dan gemini-1.5-pro-latest kini tersedia.
+- Model-model ini adalah alias yang akan selalu menunjuk ke versi stabil terbaru dari model Gemini 1.5 Flash dan 1.5 Pro.
+- Ini memungkinkan Anda menggunakan fitur-fitur 1.5 terbaru tanpa perlu mengubah kode Anda untuk setiap rilis versi baru.
+- Model gemini-1.5-flash-001 akan tetap tersedia untuk saat ini.
+- 2 Mei 2024
+- Model gemini-1.5-flash-001
+- Model gemini-1.5-flash-001 kini tersedia.
+- Model ini dioptimalkan untuk performa tinggi dan biaya rendah pada tugas-tugas bervolume tinggi.
+- Model ini memiliki jendela konteks 1 juta token.
+- ...
+- 11 April 2024
+- Peningkatan model gemini-1.0-pro-001
+- Model gemini-1.0-pro-001 telah diperbarui.
+- 9 April 2024
+- Kontrol keamanan dalam Gemini API
+- Anda kini dapat mengonfigurasi pengaturan keamanan untuk model Gemini di Google AI Studio dan di API.
+- Ini memungkinkan Anda menyesuaikan ambang batas untuk 6 kategori keamanan: Pelecehan, Ujaran Kebencian, Konten Seksual Eksplisit, Berbahaya, ...
+- 4 April 2024
+- Peningkatan model gemini-1.0-pro-001
+- Model gemini-1.0-pro-001 telah diperbarui.
+This is the Java client library for the Google Generative Language API.
+- API service code: generativelanguage
+- API service endpoint: generativelanguage.googleapis.com
+- ...
+- Dependencies for com.google.api.grpc:proto-google-cloud-ai-generativelanguage-v1beta:0.10.0:
+- ...
+- com.google.protobuf:protobuf-java:3.25.3
+- io.grpc:grpc-api:1.62.2
+- ...
+- Failed to resolve artifact com.google.api.grpc:proto-google-cloud-ai-generativelanguage-v1beta:jar:0.10.0
+- Could not find artifact com.google.api.grpc:proto-google-cloud-ai-generativelanguage-v1beta:jar:0.10.0 in central (https://repo.maven.apache.org/maven2)
+- ...
+- Similar artifacts:
+- ...
+- proto-google-cloud-ai-generativelanguage-v1beta2
+- proto-google-cloud-ai-generativelanguage-v1beta3
+- ...
+- v1beta (models.generateContent, models.streamGenerateContent, ...)
+- v1beta2 (models.generateContent, ...)
+- v1beta3 (models.generateContent, ...)
+- Models: gemini-pro, gemini-pro-vision, gemini-1.0-pro, gemini-1.0-pro-001, gemini-1.0-pro-vision-001, gemini-1.5-flash-latest, gemini-1.5-flash-001, gemini-1.5-pro-latest, gemini-1.5-pro-001
+- ...
+- List models
+- GET https://generativelanguage.googleapis.com/v1beta/models?key=YOUR_API_KEY
+- ...
+- Example Response (gemini-1.5-pro-latest):
+- {
+- "name": "models/gemini-1.5-pro-latest",
+- "version": "1.5.0",
+- "displayName": "Gemini 1.5 Pro Latest",
+- "description": "The latest stable version of the Gemini 1.5 Pro model.",
+- "inputTokenLimit": 1048576,
+- "outputTokenLimit": 8192,
+- "supportedGenerationMethods": [
+- "generateContent",
+- "streamGenerateContent"
+- ],
+- "temperature": 1.0,
+- "topP": 0.95,
+- "topK": 64
+- }
+- ...
+- Example Response (gemini-1.5-flash-latest):
+- {
+- "name": "models/gemini-1.5-flash-latest",
+- "version": "1.5.0",
+- "displayName": "Gemini 1.5 Flash Latest",
+- "description": "The latest stable version of the Gemini 1.5 Flash model.",
+- "inputTokenLimit": 1048576,
+- "outputTokenLimit": 8192,
+- "supportedGenerationMethods": [
+- "generateContent",
+- "streamGenerateContent"
+- ],
+- "temperature": 1.0,
+- "topP": 0.95,
+- "topK": 64
+- }
+- ...
+- Example Response (gemini-pro):
+- {
+- "name": "models/gemini-pro",
+- "version": "1.0.0",
+- "displayName": "Gemini Pro",
+- "description": "The stable version of the Gemini Pro model.",
+- "inputTokenLimit": 30720,
+- "outputTokenLimit": 2048,
+- "supportedGenerationMethods": [
+- "generateContent",
+- "streamGenerateContent"
+- ],
+- ...
+- }
+Here is a sample request and response for the `streamGenerateContent` method using the `gemini-1.5-flash-latest` model.
+- Request:
+- POST https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:streamGenerateContent?key=YOUR_API_KEY
+- {
+- "contents": [
+- {
+- "parts": [
+- { "text": "Write a story about a magic backpack." }
+- ]
+- }
+- ]
+- }
+- ...
+- Response (streamed chunks):
+- [
+- {
+- "candidates": [
+- {
+- "content": {
+- "parts": [
+- { "text": "Elara sighed, tugging" }
+- ],
+- "role": "model"
+- },
+- ...
+- }
+- ]
+- },
+- {
+- "candidates": [
+- {
+- "content": {
+- "parts": [
+- { "text": " on the worn leather" }
+- ],
+- "role": "model"
+- },
+- ...
+- }
+- ]
+- },
+- ...
+- ]
       // Buttons
       $('#btnRun').onclick=async()=>{
         const files=[...selectedFiles];
@@ -444,7 +592,7 @@ Style focus: ${styleText}.`;
               }
             }
             done++; setOverallProgress(done,files.length)
-            await sleep(3000); // delay 1 detik antar gambar
+            await sleep(1000); // <-- PERBAIKAN DI SINI: Diubah dari 3000 ke 1000
 
             if(aborter?.signal?.aborted) break;
           }
