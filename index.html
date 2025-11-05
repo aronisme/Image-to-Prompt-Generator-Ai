@@ -214,438 +214,341 @@ AIza..." class="mono" style="height:120px"></textarea>
     </div>
   </div>
 
-  <script>
-    // ===== Constants =====
-    const API_VALIDATE = "/.netlify/functions/validate";
-    const GEMINI_MODEL = "gemini-2.5-flash";
-    const MAX_FILE_SIZE = 10 * 1024 * 1024;
+ <script>
+  // ===== Constants =====
+  const API_VALIDATE = "/.netlify/functions/validate";
+  const GEMINI_MODEL = "gemini-2.5-flash";
+  const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-    // ===== State =====
-    let aborter = null;
-    let selectedFiles = [];
-    let thumbUrls = [];
-    let runLog = [];
+  // ===== State =====
+  let aborter = null;
+  let selectedFiles = [];
+  let thumbUrls = [];
+  let runLog = [];
 
-    // ===== Utilities =====
-    const $ = sel => document.querySelector(sel);
-    const el = (tag, attrs={}) => Object.assign(document.createElement(tag), attrs);
-    const sleep = ms => new Promise(r => setTimeout(r, ms));
-    const showToast = (m) => {
-      const t = $('#toast');
-      $('#toastMsg').textContent = m;
-      t.classList.add('show');
-      setTimeout(() => t.classList.remove('show'), 1800);
-    };
-    const toBase64 = file => new Promise((res, rej) => {
-      const r = new FileReader();
-      r.onload = () => res(r.result.split(',')[1]);
-      r.onerror = rej;
-      r.readAsDataURL(file);
-    });
-    function saveKeys(str) { localStorage.setItem('apiKeys', str); }
-    function loadKeys() { return (localStorage.getItem('apiKeys') || '').split('\n').map(s => s.trim()).filter(Boolean); }
-    function normalizeJsonText(txt) { return (txt || '').replace(/```json|```/g, '').trim(); }
-    function sanitizePlainText(s) { return (s || '').split('\n').map(l => l.trim()).filter(l => l && !/^[\[\]{}]$/.test(l)); }
-    function parsePrompts(rawText) {
-      try {
-        const j = JSON.parse(normalizeJsonText(rawText));
-        if (Array.isArray(j)) return j.filter(x => typeof x === 'string' && x.trim());
-        if (j && Array.isArray(j.prompts)) return j.prompts.map(it => typeof it === 'string' ? it : (it?.prompt || it?.prompt_text || '')).filter(Boolean);
-        return sanitizePlainText(rawText);
-      } catch {
-        return sanitizePlainText(rawText);
-      }
-    }
-    function download(name, text) {
-      const blob = new Blob([text], { type: 'text/plain' });
-      const url = URL.createObjectURL(blob);
-      const a = el('a', { href: url, download: name });
-      document.body.appendChild(a);
-      a.click();
-      URL.revokeObjectURL(url);
-      a.remove();
-    }
-    function toCsv(rows) {
-      const esc = v => ('' + (v ?? '')).replaceAll('"', '""');
-      return rows.map(r => Object.values(r).map(v => `"${esc(v)}"`).join(',')).join('\n');
-    }
+  // ===== Utilities =====
+  const $ = s => document.querySelector(s);
+  const el = (tag, attrs = {}) => Object.assign(document.createElement(tag), attrs);
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const showToast = m => {
+    const t = $('#toast');
+    $('#toastMsg').textContent = m;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 1800);
+  };
 
-    // ===== Auth Gate =====
-    async function checkAuth() {
-      const gate = $('#authGate'), bar = $('#authBar'), msg = $('#authMsg');
-      gate.hidden = false;
-      bar.style.width = '15%';
-      msg.textContent = 'Locating token…';
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        gate.hidden = true;
-        $('#app').hidden = false;
-        return;
-      }
-      try {
-        bar.style.width = '40%';
-        msg.textContent = 'Validating…';
-        const res = await fetch(API_VALIDATE, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token })
-        });
-        const j = await res.json().catch(() => ({}));
-        bar.style.width = '80%';
-        if (res.ok && j.ok) {
-          msg.textContent = 'Granted';
-          bar.style.width = '100%';
-          await sleep(250);
-        }
-        gate.hidden = true;
-        $('#app').hidden = false;
-        showToast('Ready');
-      } catch {
-        gate.hidden = true;
-        $('#app').hidden = false;
-      }
-    }
+  const toBase64 = file => new Promise((res, rej) => {
+    const reader = new FileReader();
+    reader.onload = () => res(reader.result.split(',')[1]);
+    reader.onerror = rej;
+    reader.readAsDataURL(file);
+  });
 
-    // ===== Gemini Caller =====
-    async function callGemini({ b64, prompt, mime }) {
-      const keys = loadKeys();
-      if (!keys.length) throw new Error('No API keys. Open “API Keys”.');
-      let keyIdx = 0;
-      const MAX_RETRY = 3;
-      while (keyIdx < keys.length) {
-        for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
-          try {
-            const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${keys[keyIdx]}`, {
+  function saveKeys(str) { localStorage.setItem('apiKeys', str); }
+  function loadKeys() {
+    return (localStorage.getItem('apiKeys') || '')
+      .split('\n').map(s => s.trim()).filter(Boolean);
+  }
+
+  function normalizeJsonText(txt) {
+    return (txt || '').replace(/```json|```/g, '').trim();
+  }
+
+  function sanitizePlainText(s) {
+    return (s || '').split('\n').map(l => l.trim()).filter(Boolean);
+  }
+
+  function parsePrompts(rawText) {
+    try {
+      const j = JSON.parse(normalizeJsonText(rawText));
+      if (Array.isArray(j)) return j.filter(x => typeof x === 'string' && x.trim());
+      if (j && Array.isArray(j.prompts))
+        return j.prompts.map(it => typeof it === 'string' ? it : it?.prompt || '').filter(Boolean);
+      return sanitizePlainText(rawText);
+    } catch {
+      return sanitizePlainText(rawText);
+    }
+  }
+
+  function download(name, text) {
+    const blob = new Blob([text], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = el('a', { href: url, download: name });
+    document.body.appendChild(a);
+    a.click();
+    URL.revokeObjectURL(url);
+    a.remove();
+  }
+
+  function toCsv(rows) {
+    const esc = v => ('' + (v ?? '')).replaceAll('"', '""');
+    return rows.map(r => Object.values(r).map(v => `"${esc(v)}"`).join(',')).join('\n');
+  }
+
+  // ===== Auth Gate =====
+  async function checkAuth() {
+    const gate = $('#authGate'), bar = $('#authBar'), msg = $('#authMsg');
+    gate.hidden = false;
+    bar.style.width = '20%';
+    msg.textContent = 'Checking token…';
+    const token = localStorage.getItem('auth_token');
+    if (!token) {
+      gate.hidden = true;
+      $('#app').hidden = false;
+      return;
+    }
+    try {
+      bar.style.width = '60%';
+      const res = await fetch(API_VALIDATE, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+      const j = await res.json().catch(() => ({}));
+      bar.style.width = '100%';
+      if (res.ok && j.ok) showToast('Access granted');
+    } catch (e) {
+      console.warn('Auth check failed:', e);
+    } finally {
+      gate.hidden = true;
+      $('#app').hidden = false;
+    }
+  }
+
+  // ===== Gemini API =====
+  async function callGemini({ b64, prompt, mime }) {
+    const keys = loadKeys();
+    if (!keys.length) throw new Error('No API keys found. Please add one.');
+
+    let keyIdx = 0;
+    const MAX_RETRY = 3;
+
+    while (keyIdx < keys.length) {
+      const key = keys[keyIdx];
+      for (let attempt = 1; attempt <= MAX_RETRY; attempt++) {
+        try {
+          const res = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${key}`,
+            {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               signal: aborter?.signal,
               body: JSON.stringify({
                 contents: [{ parts: [{ text: prompt }, { inlineData: { mimeType: mime, data: b64 } }] }]
               })
-            });
-            if (!res.ok) {
-              const bodyText = await res.text().catch(() => '');
-              throw new Error(`HTTP ${res.status} ${res.statusText} :: ${bodyText?.slice(0, 200)}`);
             }
-            const json = await res.json();
-            return { ok: true, json };
-          } catch (e) {
-            if (aborter?.signal?.aborted) return { ok: false, error: 'Aborted' };
-            if (attempt === MAX_RETRY) keyIdx++;
-            await sleep(350 * attempt);
-            if (keyIdx >= keys.length && attempt === MAX_RETRY) {
-              return { ok: false, error: e.message || String(e) };
-            }
+          );
+
+          if (!res.ok) {
+            const text = await res.text();
+            throw new Error(`HTTP ${res.status} ${res.statusText}: ${text.slice(0, 200)}`);
           }
+
+          const json = await res.json();
+          const text =
+            json?.candidates?.[0]?.content?.parts?.[0]?.text ||
+            json?.candidates?.[0]?.output_text ||
+            json?.text ||
+            JSON.stringify(json);
+          return { ok: true, text, raw: json };
+        } catch (err) {
+          console.warn(`[Gemini] Attempt ${attempt} failed (key ${keyIdx + 1}/${keys.length}):`, err.message);
+          if (aborter?.signal?.aborted) return { ok: false, error: 'Aborted' };
+          if (attempt === MAX_RETRY) keyIdx++;
+          await sleep(400 * attempt);
         }
       }
-      return { ok: false, error: 'All API keys exhausted' };
     }
 
-    // ===== Rendering =====
-    function clearThumbs() {
-      thumbUrls.forEach(u => URL.revokeObjectURL(u));
-      thumbUrls = [];
-      $('#thumbs').innerHTML = '';
+    return { ok: false, error: 'All keys exhausted or invalid.' };
+  }
+
+  // ===== Rendering =====
+  function clearThumbs() {
+    thumbUrls.forEach(u => URL.revokeObjectURL(u));
+    thumbUrls = [];
+    $('#thumbs').innerHTML = '';
+  }
+
+  function renderThumbs() {
+    clearThumbs();
+    const box = $('#thumbs');
+    for (const f of selectedFiles) {
+      const url = URL.createObjectURL(f);
+      thumbUrls.push(url);
+      const img = el('img', { className: 'thumb', src: url, title: f.name });
+      box.appendChild(img);
     }
-    function renderThumbs() {
-      clearThumbs();
-      const box = $('#thumbs');
-      for (const f of selectedFiles) {
-        const url = URL.createObjectURL(f);
-        thumbUrls.push(url);
-        const img = el('img', { className: 'thumb' });
-        img.src = url;
-        img.title = f.name;
-        box.appendChild(img);
+  }
+
+  function makeItemRow(file) {
+    const item = el('div', { className: 'item' });
+    const meta = el('div', { className: 'meta' });
+    const left = el('div');
+    left.innerHTML = `<strong>${file.name}</strong> • ${(file.size / 1024 | 0)} KB`;
+    const chip = el('span', { className: 'chip', innerHTML: `<span class="spin"></span><span>Queued</span>` });
+    meta.append(left, chip);
+    const pre = el('pre', { className: 'mono', style: 'white-space:pre-wrap' });
+    item.append(meta, pre);
+    return { item, chip, pre };
+  }
+
+  function setChip(chip, type, text) {
+    chip.className = `chip ${type}`;
+    chip.innerHTML =
+      type === 'pending' ? `<span class="spin"></span><span>${text}</span>` :
+      `<span>${text}</span>`;
+  }
+
+  function setProgress(done, total) {
+    $('#overallBar').style.width = `${(done / total) * 100}%`;
+  }
+
+  // ===== Worker =====
+  async function* processFiles(files, { numPrompts, styleFocus, platform, variation }) {
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        yield { file, error: 'Not an image file' };
+        continue;
       }
-    }
+      if (file.size > MAX_FILE_SIZE) {
+        yield { file, error: 'File exceeds 10MB' };
+        continue;
+      }
 
-    function makeItemRow(file) {
-      const item = el('div', { className: 'item' });
-      const meta = el('div', { className: 'meta' });
-      const left = el('div');
-      left.innerHTML = `<strong>${file.name}</strong> • ${(file.size / 1024 | 0)} KB`;
-      const right = el('div');
-      const chip = el('span', { className: 'chip' });
-      chip.innerHTML = `<span class="spin" aria-hidden="true"></span><span>Queued</span>`;
-      right.appendChild(chip);
-      meta.append(left, right);
-      item.appendChild(meta);
-      const pre = el('pre', { className: 'mono', textContent: '', style: 'margin:0;white-space:pre-wrap' });
-      item.appendChild(pre);
-      return { item, chip, pre };
-    }
+      const b64 = await toBase64(file);
+      const styleText = styleFocus === 'auto' ? 'based on the image style' : `in ${styleFocus} style`;
+      const platformText = platform === 'general' ? 'general use' : `optimized for ${platform}`;
+      const variationRule =
+        variation === 'low' ? 'Slight variations only.' :
+        variation === 'medium' ? 'Balanced creative variations.' :
+        'Highly creative variations.';
 
-    function setChip(chip, type, text) {
-      chip.className = 'chip';
-      if (type === 'ok') chip.classList.add('ok');
-      if (type === 'err') chip.classList.add('err');
-      chip.innerHTML = (type === 'pending')
-        ? `<span class="spin"></span><span>${text || 'Processing'}</span>`
-        : `<span>${text || (type === 'ok' ? 'Done' : 'Error')}</span>`;
-    }
-
-    function setOverallProgress(done, total) {
-      $('#overallBar').style.width = total ? ((done / total) * 100).toFixed(1) + '%' : '0%';
-    }
-
-    // ===== Worker / Pipeline =====
-    async function* processFiles(files, { numPrompts, styleFocus, platform, variation }) {
-      for (const file of files) {
-        if (!file.type.startsWith('image/')) {
-          yield { file, error: 'Not an image' };
-          continue;
-        }
-        if (file.size > MAX_FILE_SIZE) {
-          yield { file, error: 'File > 10MB' };
-          continue;
-        }
-        const b64 = await toBase64(file);
-        const styleText = styleFocus === 'auto' ? 'based on the image style' : `in ${styleFocus} style`;
-        const platformText = platform === 'general' ? 'general use' : `optimized for ${platform}`;
-        const variationRule = variation === 'low' ? 'Make only slight creative variations.' :
-          variation === 'medium' ? 'Make balanced creative variations.' : 'Make highly creative variations.';
-        const promptText = `Analyze the uploaded image and create exactly ${numPrompts} unique prompts.
-Rules:
+      const promptText = `
+Analyze this image and create exactly ${numPrompts} unique prompts.
 1. Do NOT replicate the image exactly.
 2. Keep the main idea.
 3. ${variationRule}
-4. Prompts suitable for ${platformText}, stock-safe.
-5. Respond strictly in JSON format.
-Style focus: ${styleText}.`;
+4. Stock-safe, ${platformText}.
+5. Respond strictly in JSON array.
+Style: ${styleText}.
+`;
 
-        const start = performance.now();
-        const resp = await callGemini({ b64, prompt: promptText, mime: file.type });
-        const ms = (performance.now() - start) | 0;
-        if (!resp.ok) {
-          yield { file, error: resp.error, time: ms };
-          continue;
-        }
-        const raw = resp.json?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-        const prompts = parsePrompts(raw);
+      const start = performance.now();
+      const resp = await callGemini({ b64, prompt: promptText, mime: file.type });
+      const ms = (performance.now() - start) | 0;
+
+      if (!resp.ok) {
+        yield { file, error: resp.error, time: ms };
+      } else {
+        const prompts = parsePrompts(resp.text);
         yield { file, prompts, time: ms };
       }
     }
+  }
 
-    // ===== App init =====
-    (function () {
-      // Keys modal
-      const keysModal = $('#keysModal');
-      function openKeys() {
-        $('#keysInput').value = loadKeys().join('\n');
-        keysModal.classList.add('show');
-      }
-      function closeKeys() {
-        keysModal.classList.remove('show');
-      }
-      $('#btnKeys').onclick = openKeys;
-      $('#keysClose').onclick = closeKeys;
-      $('#keysSave').onclick = () => {
-        saveKeys($('#keysInput').value.trim());
-        showToast('API keys saved');
-        closeKeys();
+  // ===== Init =====
+  (function initApp() {
+    // --- Modal API keys ---
+    const keysModal = $('#keysModal');
+    $('#btnKeys').onclick = () => {
+      $('#keysInput').value = loadKeys().join('\n');
+      keysModal.classList.add('show');
+    };
+    $('#keysClose').onclick = () => keysModal.classList.remove('show');
+    $('#keysSave').onclick = () => {
+      saveKeys($('#keysInput').value.trim());
+      showToast('API keys saved');
+      keysModal.classList.remove('show');
+    };
+
+    // --- Files ---
+    const fileInput = $('#file');
+    $('#btnPick').onclick = () => fileInput.click();
+    fileInput.onchange = e => {
+      selectedFiles = Array.from(e.target.files);
+      renderThumbs();
+      showToast(`${selectedFiles.length} file(s) selected`);
+    };
+
+    $('#btnClear').onclick = () => {
+      selectedFiles = [];
+      clearThumbs();
+      showToast('Cleared');
+    };
+
+    // --- Run ---
+    $('#btnRun').onclick = async () => {
+      if (!selectedFiles.length) return showToast('Pick images first');
+      aborter = new AbortController();
+      runLog = [];
+      $('#result').innerHTML = '';
+      $('#status').textContent = 'Processing…';
+      setProgress(0, selectedFiles.length);
+
+      const params = {
+        numPrompts: parseInt($('#numPrompts').value || '2', 10),
+        styleFocus: $('#styleFocus').value,
+        platform: $('#platform').value,
+        variation: $('#variation').value,
+        concurrency: Math.max(1, Math.min(6, parseInt($('#concurrency').value || '3', 10))),
+        delay: Math.max(0, Math.min(3000, parseInt($('#delay').value || '1000', 10)))
       };
 
-      // Summary modal
-      const reportModal = $('#reportModal');
-      function openReport() {
-        const total = runLog.length;
-        const success = runLog.filter(r => r.status === 'ok').length;
-        const failed = total - success;
-        $('#summaryText').textContent = `Total: ${total} • Success: ${success} • Failed: ${failed}`;
-        const box = $('#reportTable');
-        box.innerHTML = '';
-        const header = el('div', {
-          innerHTML: 'file,size_kb,status,time_ms,error',
-          className: 'mono',
-          style: 'opacity:.7;margin-bottom:6px'
-        });
-        box.appendChild(header);
-        for (const r of runLog) {
-          const row = el('div', {
-            style: 'display:grid;grid-template-columns:2fr 90px 90px 80px 1fr;gap:8px;padding:4px 0;border-bottom:1px dashed var(--line)'
-          });
-          row.innerHTML = `<div>${r.file}</div><div>${r.kb}</div><div>${r.status}</div><div>${r.time || ''}</div><div class="muted">${r.error || ''}</div>`;
-          box.appendChild(row);
-        }
-        reportModal.classList.add('show');
-      }
-      function closeReport() {
-        reportModal.classList.remove('show');
-      }
-      $('#btnReport').onclick = openReport;
-      $('#reportClose').onclick = closeReport;
-      $('#btnDownloadJson').onclick = () => download('report.json', JSON.stringify(runLog, null, 2));
-      $('#btnDownloadCsv').onclick = () => download('report.csv', toCsv(runLog));
+      const rows = selectedFiles.map(f => ({ f, ui: makeItemRow(f) }));
+      rows.forEach(r => $('#result').append(r.ui.item));
 
-      // Logout
-      $('#btnLogout').onclick = () => {
-        localStorage.removeItem('auth_token');
-        location.href = 'login.html';
-      };
-
-      // File handling
-      const fileInput = $('#file');
-      const dropZone = $('#drop');
-      const btnPick = $('#btnPick');
-
-      function openFileDialog() {
-        fileInput.click();
-      }
-
-      btnPick.addEventListener('click', openFileDialog);
-      dropZone.addEventListener('click', openFileDialog);
-
-      $('#btnClear').onclick = () => {
-        selectedFiles = [];
-        clearThumbs();
-        showToast('Cleared');
-      };
-
-      fileInput.addEventListener('change', (e) => {
-        selectedFiles = Array.from(e.target.files);
-        renderThumbs();
-        showToast(`${selectedFiles.length} image(s) selected`);
-      });
-
-      dropZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        dropZone.classList.add('drag');
-      });
-
-      dropZone.addEventListener('dragleave', () => {
-        dropZone.classList.remove('drag');
-      });
-
-      dropZone.addEventListener('drop', (e) => {
-        e.preventDefault();
-        dropZone.classList.remove('drag');
-        selectedFiles = Array.from(e.dataTransfer.files);
-        renderThumbs();
-        showToast(`${selectedFiles.length} dropped`);
-      });
-
-      document.addEventListener('paste', (e) => {
-        const items = Array.from(e.clipboardData?.items || []).filter(i => i.kind === 'file');
-        if (!items.length) return;
-        selectedFiles = items.map(i => i.getAsFile()).filter(Boolean);
-        renderThumbs();
-        showToast('Image pasted');
-      });
-
-      // Run logic
-      $('#btnRun').onclick = async () => {
-        if (!selectedFiles.length) return showToast('Pick images first');
-        const params = {
-          numPrompts: parseInt($('#numPrompts').value || '2', 10),
-          styleFocus: $('#styleFocus').value,
-          platform: $('#platform').value,
-          variation: $('#variation').value,
-          animMode: $('#animMode').value,
-          concurrency: Math.max(1, Math.min(6, parseInt($('#concurrency').value || '3', 10))),
-          delay: Math.max(0, Math.min(3000, parseInt($('#delay').value || '1000', 10)))
-        };
-
-        runLog = [];
-        $('#result').innerHTML = '';
-        $('#status').textContent = 'Processing…';
-        setOverallProgress(0, selectedFiles.length);
-        aborter = new AbortController();
-
-        const files = [...selectedFiles];
-        const rows = files.map(f => ({ file: f, ui: params.animMode === 'interactive' ? makeItemRow(f) : null }));
-        if (params.animMode === 'interactive') {
-          rows.forEach(r => $('#result').appendChild(r.ui.item));
-        }
-
-        let done = 0;
-        const q = [...rows];
-        async function worker() {
-          while (q.length) {
-            const r = q.shift();
-            if (!r) break;
-            const { file, ui } = r;
-            if (ui) setChip(ui.chip, 'pending', 'Processing');
-
-            for await (const out of processFiles([file], params)) {
-              if (out.error) {
-                const rec = { file: file.name, kb: (file.size / 1024) | 0, status: 'fail', time: out.time || '', error: out.error };
-                runLog.push(rec);
-                if (ui) {
-                  setChip(ui.chip, 'err', 'Failed');
-                  ui.pre.textContent = out.error;
-                }
-              } else {
-                const text = out.prompts.join('\n\n');
-                const rec = { file: file.name, kb: (file.size / 1024) | 0, status: 'ok', time: out.time || '', error: '' };
-                runLog.push(rec);
-                if (ui) {
-                  setChip(ui.chip, 'ok', 'Done');
-                  ui.pre.textContent = text;
-                  const btn = el('button', { textContent: 'Copy' });
-                  btn.onclick = () => {
-                    navigator.clipboard.writeText(text);
-                    showToast('Copied');
-                  };
-                  ui.item.appendChild(btn);
-                } else {
-                  const card = el('div', { className: 'item' });
-                  const meta = el('div', { className: 'meta', innerHTML: `<span>${file.name}</span><span>${(file.size / 1024) | 0} KB</span>` });
-                  const pre = el('pre', { className: 'mono', textContent: text, style: 'margin:0;white-space:pre-wrap' });
-                  const btn = el('button', { textContent: 'Copy' });
-                  btn.onclick = () => {
-                    navigator.clipboard.writeText(text);
-                    showToast('Copied');
-                  };
-                  card.append(meta, pre, btn);
-                  $('#result').appendChild(card);
-                }
-              }
+      let done = 0;
+      const queue = [...rows];
+      async function worker() {
+        while (queue.length && !aborter.signal.aborted) {
+          const { f, ui } = queue.shift();
+          setChip(ui.chip, 'pending', 'Working');
+          for await (const out of processFiles([f], params)) {
+            const rec = { file: f.name, kb: (f.size / 1024 | 0), time: out.time || '' };
+            if (out.error) {
+              rec.status = 'fail'; rec.error = out.error;
+              setChip(ui.chip, 'err', 'Error');
+              ui.pre.textContent = out.error;
+            } else {
+              rec.status = 'ok';
+              const txt = out.prompts.join('\n\n');
+              ui.pre.textContent = txt;
+              setChip(ui.chip, 'ok', 'Done');
+              const btn = el('button', { textContent: 'Copy' });
+              btn.onclick = () => {
+                navigator.clipboard.writeText(txt);
+                showToast('Copied');
+              };
+              ui.item.append(btn);
             }
-            done++;
-            setOverallProgress(done, files.length);
-            if (params.delay) await sleep(params.delay);
-            if (aborter?.signal?.aborted) break;
+            runLog.push(rec);
           }
+          done++;
+          setProgress(done, selectedFiles.length);
+          if (params.delay) await sleep(params.delay);
         }
+      }
 
-        await Promise.all(Array.from({ length: Math.min(params.concurrency, files.length) }, () => worker()));
-        const success = runLog.filter(r => r.status === 'ok').length;
-        const failed = runLog.length - success;
-        $('#status').textContent = aborter?.signal?.aborted ? 'Canceled' : `Done • ${success} ok / ${failed} failed`;
-        openReport();
-      };
+      await Promise.all(Array.from({ length: params.concurrency }, () => worker()));
 
-      $('#btnCancel').onclick = () => {
-        if (aborter) {
-          aborter.abort();
-          showToast('Canceled');
-        }
-      };
+      const ok = runLog.filter(r => r.status === 'ok').length;
+      const fail = runLog.length - ok;
+      $('#status').textContent = aborter.signal.aborted
+        ? 'Canceled'
+        : `Done • ${ok} ok / ${fail} failed`;
+    };
 
-      // Export
-      $('#btnCopyAll').onclick = () => {
-        const all = [...document.querySelectorAll('#result pre')].map(p => p.textContent).join('\n');
-        navigator.clipboard.writeText(all || '');
-        showToast('All copied');
-      };
-      $('#btnSaveTxt').onclick = () => {
-        const all = [...document.querySelectorAll('#result pre')].map(p => p.textContent).join('\n\n');
-        download('prompts.txt', all || '');
-      };
-      $('#btnSaveJson').onclick = () => {
-        const groups = [...document.querySelectorAll('.item')].map(card => {
-          const name = (card.querySelector('.meta span') || {}).textContent || '';
-          const arr = [...card.querySelectorAll('pre')].map(p => p.textContent);
-          return { [name]: arr };
-        });
-        download('prompts.json', JSON.stringify(groups, null, 2));
-      };
+    $('#btnCancel').onclick = () => {
+      if (aborter) {
+        aborter.abort();
+        showToast('Canceled');
+      }
+    };
 
-      // Boot
-      checkAuth();
-    })();
-  </script>
+    checkAuth();
+  })();
+</script>
+
 </body>
 </html>
