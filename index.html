@@ -134,7 +134,7 @@
           </div>
           <div>
             <label for="concurrency">Concurrency</label>
-            <input id="concurrency" type="number" min="1" max="6" value="3" />
+            <input id="concurrency" type="number" min="1" max="6" value="1" />
           </div>
         </div>
         <div class="row">
@@ -535,7 +535,7 @@ Style: ${styleText}.
         styleFocus: $('#styleFocus').value,
         platform: $('#platform').value,
         variation: $('#variation').value,
-        concurrency: Math.max(1, Math.min(6, parseInt($('#concurrency').value || '3', 10))),
+        concurrency: Math.max(1, Math.min(6, parseInt($('#concurrency').value || '1', 10))),
         delay: Math.max(0, Math.min(3000, parseInt($('#delay').value || '1000', 10)))
       };
 
