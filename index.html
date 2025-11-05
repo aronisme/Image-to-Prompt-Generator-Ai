@@ -140,7 +140,7 @@
         <div class="row">
           <div>
             <label for="delay">Delay (ms)</label>
-            <input id="delay" type="number" min="0" max="3000" value="1000" />
+            <input id="delay" type="number" min="0" max="3000" value="3000" />
           </div>
           <div>
             <label>&nbsp;</label>
@@ -540,7 +540,7 @@ Style: ${styleText}.
         platform: $('#platform').value,
         variation: $('#variation').value,
         concurrency: Math.max(1, Math.min(6, parseInt($('#concurrency').value || '1', 10))),
-        delay: Math.max(0, Math.min(3000, parseInt($('#delay').value || '1000', 10)))
+        delay: Math.max(0, Math.min(3000, parseInt($('#delay').value || '3000', 10)))
       };
 
       const rows = selectedFiles.map(f => ({ f, ui: makeItemRow(f) }));
