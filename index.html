@@ -219,6 +219,7 @@ AIza..." class="mono" style="height:120px"></textarea>
   const API_VALIDATE = "/.netlify/functions/validate";
   const GEMINI_MODEL = "gemini-2.5-flash";
   const MAX_FILE_SIZE = 10 * 1024 * 1024;
+  const MAX_FILES = 10; // 🔥 batas maksimal gambar
 
   // ===== State =====
   let aborter = null;
@@ -379,6 +380,10 @@ AIza..." class="mono" style="height:120px"></textarea>
       const img = el('img', { className: 'thumb', src: url, title: f.name });
       box.appendChild(img);
     }
+    // 🔹 tampilkan counter
+    $('#fileCount')?.remove();
+    const counter = el('div', { id: 'fileCount', className: 'muted', textContent: `${selectedFiles.length}/${MAX_FILES} selected` });
+    box.appendChild(counter);
   }
 
   function makeItemRow(file) {
@@ -465,8 +470,13 @@ Style: ${styleText}.
     // --- Files ---
     const fileInput = $('#file');
     $('#btnPick').onclick = () => fileInput.click();
+
     fileInput.onchange = e => {
-      selectedFiles = Array.from(e.target.files);
+      const files = Array.from(e.target.files);
+      if (files.length > MAX_FILES) {
+        showToast(`⚠️ Maksimal ${MAX_FILES} gambar!`);
+      }
+      selectedFiles = files.slice(0, MAX_FILES);
       renderThumbs();
       showToast(`${selectedFiles.length} file(s) selected`);
     };
@@ -476,6 +486,38 @@ Style: ${styleText}.
       clearThumbs();
       showToast('Cleared');
     };
+
+    // 🔹 Drag & drop handler
+    const dropZone = $('#drop');
+    dropZone.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropZone.classList.add('drag');
+    });
+    dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag'));
+    dropZone.addEventListener('drop', e => {
+      e.preventDefault();
+      dropZone.classList.remove('drag');
+      const files = Array.from(e.dataTransfer.files);
+      if (files.length > MAX_FILES) {
+        showToast(`⚠️ Maksimal ${MAX_FILES} gambar!`);
+      }
+      selectedFiles = files.slice(0, MAX_FILES);
+      renderThumbs();
+      showToast(`${selectedFiles.length} dropped`);
+    });
+
+    // 🔹 Paste handler
+    document.addEventListener('paste', e => {
+      const items = Array.from(e.clipboardData?.items || []).filter(i => i.kind === 'file');
+      if (!items.length) return;
+      const files = items.map(i => i.getAsFile()).filter(Boolean);
+      if (files.length > MAX_FILES) {
+        showToast(`⚠️ Maksimal ${MAX_FILES} gambar!`);
+      }
+      selectedFiles = files.slice(0, MAX_FILES);
+      renderThumbs();
+      showToast('Image pasted');
+    });
 
     // --- Run ---
     $('#btnRun').onclick = async () => {
@@ -549,6 +591,7 @@ Style: ${styleText}.
     checkAuth();
   })();
 </script>
+
 
 </body>
 </html>
