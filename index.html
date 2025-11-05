@@ -286,6 +286,8 @@ AIza..." class="mono" style="height:120px"></textarea>
     return rows.map(r => Object.values(r).map(v => `"${esc(v)}"`).join(',')).join('\n');
   }
 
+
+
   // ===== Auth Gate =====
   async function checkAuth() {
     const gate = $('#authGate'), bar = $('#authBar'), msg = $('#authMsg');
@@ -587,6 +589,74 @@ Style: ${styleText}.
         showToast('Canceled');
       }
     };
+
+        // --- Export & Copy ---
+    $('#btnCopyAll').onclick = () => {
+      const all = [...document.querySelectorAll('#result pre')]
+        .map(p => p.textContent)
+        .join('\n\n');
+      if (!all.trim()) return showToast('No output to copy');
+      navigator.clipboard.writeText(all);
+      showToast('All copied');
+    };
+
+    $('#btnSaveTxt').onclick = () => {
+      const all = [...document.querySelectorAll('#result pre')]
+        .map(p => p.textContent)
+        .join('\n\n');
+      if (!all.trim()) return showToast('No output to save');
+      download('prompts.txt', all);
+      showToast('Saved as TXT');
+    };
+
+    $('#btnSaveJson').onclick = () => {
+      const groups = [...document.querySelectorAll('.item')].map(card => {
+        const name = (card.querySelector('.meta strong') || {}).textContent || '';
+        const content = [...card.querySelectorAll('pre')].map(p => p.textContent);
+        return { file: name, prompts: content };
+      });
+      if (!groups.length) return showToast('No data to save');
+      download('prompts.json', JSON.stringify(groups, null, 2));
+      showToast('Saved as JSON');
+    };
+
+    // --- Report Modal ---
+    $('#btnReport').onclick = () => {
+      const total = runLog.length;
+      const success = runLog.filter(r => r.status === 'ok').length;
+      const failed = total - success;
+      $('#summaryText').textContent = `Total: ${total} • Success: ${success} • Failed: ${failed}`;
+
+      const box = $('#reportTable');
+      box.innerHTML = '';
+      const header = el('div', {
+        innerHTML: 'file,size_kb,status,time_ms,error',
+        className: 'mono',
+        style: 'opacity:.7;margin-bottom:6px'
+      });
+      box.appendChild(header);
+
+      for (const r of runLog) {
+        const row = el('div', {
+          style: 'display:grid;grid-template-columns:2fr 80px 80px 80px 1fr;gap:6px;padding:4px 0;border-bottom:1px dashed var(--line)'
+        });
+        row.innerHTML = `
+          <div>${r.file}</div>
+          <div>${r.kb}</div>
+          <div>${r.status}</div>
+          <div>${r.time || ''}</div>
+          <div class="muted">${r.error || ''}</div>
+        `;
+        box.appendChild(row);
+      }
+
+      $('#reportModal').classList.add('show');
+    };
+
+    $('#reportClose').onclick = () => $('#reportModal').classList.remove('show');
+    $('#btnDownloadJson').onclick = () => download('report.json', JSON.stringify(runLog, null, 2));
+    $('#btnDownloadCsv').onclick = () => download('report.csv', toCsv(runLog));
+
 
     checkAuth();
   })();
